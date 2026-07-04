@@ -20,7 +20,7 @@ Reactive – Is a reactive data model for two-way data binding
 
 ## Documentation
 
-Read about `Reactive` usage in the [Metro UI](https://v5.metroui.org.ua/libraries/reactive) documentation.
+Read about `Reactive` usage in the [DESCRIPTION](DESCRIPTION.md).
 
 ## License
 
