@@ -1,9 +1,9 @@
-export default class ModelPlugin {
-    model = null;
-    
-    constructor(model) {
-        this.model = model;
-    }
-    
-    run(){}
+export default class ReactivePlugin {
+  reactive = null;
+
+  constructor(reactive) {
+    this.reactive = reactive;
+  }
+
+  run() {}
 }

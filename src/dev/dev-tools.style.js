@@ -1,6 +1,6 @@
 const DevToolsStyle = `
     <style>
-        #model-devtools-panel  { 
+        #reactive-devtools-panel  { 
             position: fixed;
             bottom: 0;
             right: 0;
@@ -37,7 +37,7 @@ const DevToolsStyle = `
             }
         }
         
-        #model-dev-tools-toggle-button {
+        #reactive-devtools-toggle-button {
             position: fixed;
             bottom: 10px;
             right: 10px;
@@ -54,7 +54,7 @@ const DevToolsStyle = `
             justify-content: center;
         }        
 
-        #model-devtools-time-travel-dialog {
+        #reactive-devtools-time-travel-dialog {
             position: fixed;
             bottom: 0;
             right: 304px;
@@ -97,7 +97,7 @@ const DevToolsStyle = `
             }
         }
         
-        #model-devtools-panel, #model-devtools-time-travel-dialog {
+        #reactive-devtools-panel, #reactive-devtools-time-travel-dialog {
             button {
                 height: 20px;
                 display: inline-flex;
@@ -131,6 +131,6 @@ const DevToolsStyle = `
             justify-content: space-between;
         }
     </style>
-`
+`;
 
-export default DevToolsStyle
+export default DevToolsStyle;

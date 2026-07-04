@@ -1,12 +1,12 @@
-# Understanding Reactive Programming with `Model`
+# Understanding Reactive Programming with `Reactive`
 
 ## Introduction
 
-Welcome to this comprehensive guide on `Model`, a powerful JavaScript library for reactive programming and two-way data binding. This article is designed for beginner programmers who want to understand the concepts of reactive programming and how to implement them in their web applications.
+Welcome to this comprehensive guide on `Reactive`, a powerful JavaScript library for reactive programming and two-way data binding. This article is designed for beginner programmers who want to understand the concepts of reactive programming and how to implement them in their web applications.
 
-## What is `Model`?
+## What is `Reactive`?
 
-`Model` is a lightweight JavaScript library that provides a reactive data model with two-way data binding capabilities. It allows you to create dynamic web applications where the UI automatically updates when the underlying data changes, and vice versa. This eliminates the need for manual DOM manipulation and helps you write cleaner, more maintainable code.
+`Reactive` is a lightweight JavaScript library that provides a reactive data model with two-way data binding capabilities. It allows you to create dynamic web applications where the UI automatically updates when the underlying data changes, and vice versa. This eliminates the need for manual DOM manipulation and helps you write cleaner, more maintainable code.
 
 ## Key Concepts
 
@@ -20,20 +20,20 @@ Two-way data binding is a connection between the UI (view) and the data model. W
 
 ### Virtual DOM
 
-A virtual DOM is a lightweight copy of the actual DOM. `Model` uses a virtual DOM to track changes and update only the parts of the UI that need to be updated, making it more efficient than directly manipulating the DOM.
+A virtual DOM is a lightweight copy of the actual DOM. `Reactive` uses a virtual DOM to track changes and update only the parts of the UI that need to be updated, making it more efficient than directly manipulating the DOM.
 
-## Core Components of Model
+## Core Components of Reactive
 
-### Model
+### Reactive
 
-The `Model` class is the main entry point of the library. It manages the reactive data, DOM bindings, computed properties, and more. When you create a new instance of `Model`, you provide it with initial data and configuration options.
+The `Reactive` class is the main entry point of the library. It manages the reactive data, DOM bindings, computed properties, and more. When you create a new instance of `Reactive`, you provide it with initial data and configuration options.
 
 ```javascript
-import Model from '@olton/model';
+import Reactive from '@olton/reactive';
 
-const model = new Model({
-    name: 'John',
-    age: 30
+const model = new Reactive({
+  name: 'John',
+  age: 30,
 });
 ```
 
@@ -52,20 +52,20 @@ The `DOMManager` class handles the DOM binding and updates. It parses the DOM fo
 You can install `Model` using npm:
 
 ```bash
-npm install @olton/model
+npm install @olton/reactive
 ```
 
 ### Basic Usage
 
-Here's a simple example of how to use `Model`:
+Here's a simple example of how to use `Reactive`:
 
 ```javascript
-import Model from '@olton/model';
+import Reactive from '@olton/reactive';
 
-// Create a new model with initial data
-const model = new Model({
-    name: 'John',
-    age: 30
+// Create a new reactive instance with initial data
+const model = new Reactive({
+  name: 'John',
+  age: 30,
 });
 
 // Initialize the model on a DOM element
@@ -76,11 +76,11 @@ In your HTML, you can use template expressions to display data from the model:
 
 ```html
 <div id="app">
-    <p>Name: {{name}}</p>
-    <p>Age: {{age}}</p>
-    
-    <input type="text" data-model="name">
-    <input type="number" data-model="age">
+  <p>Name: {{name}}</p>
+  <p>Age: {{age}}</p>
+
+  <input type="text" data-model="name" />
+  <input type="number" data-model="age" />
 </div>
 ```
 
@@ -91,12 +91,12 @@ When the user types in the input fields, the model's data will update automatica
 You can define computed properties that depend on other properties:
 
 ```javascript
-const model = new Model({
-    firstName: 'John',
-    lastName: 'Doe',
-    fullName: function() {
-        return this.firstName + ' ' + this.lastName;
-    }
+const model = new Reactive({
+  firstName: 'John',
+  lastName: 'Doe',
+  fullName: function () {
+    return this.firstName + ' ' + this.lastName;
+  },
 });
 ```
 
@@ -112,10 +112,10 @@ You can conditionally render elements based on data in your model:
 
 ```html
 <div data-if="age >= 18">
-    <p>You are an adult.</p>
+  <p>You are an adult.</p>
 </div>
 <div data-if="age < 18">
-    <p>You are a minor.</p>
+  <p>You are a minor.</p>
 </div>
 ```
 
@@ -125,19 +125,15 @@ You can render lists of items using loops:
 
 ```html
 <ul>
-    <li data-loop="item in items">{{item.name}}</li>
+  <li data-loop="item in items">{{item.name}}</li>
 </ul>
 ```
 
 In your model:
 
 ```javascript
-const model = new Model({
-    items: [
-        { name: 'Item 1' },
-        { name: 'Item 2' },
-        { name: 'Item 3' }
-    ]
+const model = new Reactive({
+  items: [{ name: 'Item 1' }, { name: 'Item 2' }, { name: 'Item 3' }],
 });
 ```
 
@@ -145,16 +141,17 @@ const model = new Model({
 
 ### State Management
 
-`Model` includes a state management system that allows you to save and restore the state of your application:
+`Reactive` includes a state management system that allows you to save and restore the state of your application:
 
 ```javascript
 // Save the current state
-const state = model.save();
+const state = Reactive.save();
 
 // Restore a previously saved state
-model.restore();
+Reactive.restore();
 
 // Create a snapshot of the current state
+const model = new Reactive({ name: 'John', age: 30 });
 const snapshot = model.snapshot();
 
 // Restore a snapshot
@@ -163,26 +160,27 @@ model.snapshot(snapshot);
 
 ### Plugins
 
-You can extend the functionality of `Model` using plugins:
+You can extend the functionality of `Reactive` using plugins:
 
 ```javascript
-import Model, { ModelPlugin } from '@olton/model';
+import Reactive, { ReactivePlugin } from '@olton/reactive';
 
-class MyPlugin extends ModelPlugin {
-    constructor(model, options) {
-        super(model, options);
-    }
-    
-    run() {
-        // Plugin logic here
-    }
+class MyPlugin extends ReactivePlugin {
+  constructor(model, options) {
+    super(model, options);
+  }
+
+  run() {
+    // Plugin logic here
+  }
 }
 
-const model = new Model({}, {
-    plugins: [
-        { name: 'myPlugin', plugin: MyPlugin }
-    ]
-});
+const model = new Reactive(
+  {},
+  {
+    plugins: [{ name: 'myPlugin', plugin: MyPlugin }],
+  },
+);
 
 // Use the plugin
 model.usePlugin('myPlugin');
@@ -194,11 +192,11 @@ You can use middleware to intercept and modify state changes:
 
 ```javascript
 model.use((context, next) => {
-    // Modify the context if needed
-    console.log(`Property ${context.prop} changed from ${context.oldValue} to ${context.newValue}`);
-    
-    // Call the next middleware
-    next();
+  // Modify the context if needed
+  console.log(`Property ${context.prop} changed from ${context.oldValue} to ${context.newValue}`);
+
+  // Call the next middleware
+  next();
 });
 ```
 
@@ -211,8 +209,8 @@ model.use((context, next) => {
 
 ## Conclusion
 
-`Model` is a powerful library for reactive programming and two-way data binding. It provides a simple and intuitive API for creating dynamic web applications with minimal code. By understanding the concepts of reactive programming and how `Model` implements them, you can write cleaner, more maintainable code and create better user experiences.
+`Reactive` is a powerful library for reactive programming and two-way data binding. It provides a simple and intuitive API for creating dynamic web applications with minimal code. By understanding the concepts of reactive programming and how `Reactive` implements them, you can write cleaner, more maintainable code and create better user experiences.
 
-For more detailed information, check out the [official documentation](https://v5.metroui.org.ua/libraries/model).
+For more detailed information, check out the [official documentation](https://v5.metroui.org.ua/libraries/reactive).
 
 Happy coding!
