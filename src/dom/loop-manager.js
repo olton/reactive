@@ -206,7 +206,7 @@ export default class LoopManager {
       const bracketMatch = path.match(bracketRegex);
 
       if (bracketMatch) {
-        const objName = bracketMatch[1];
+        // const objName = bracketMatch[1];
         const obj = objectData;
 
         if (obj && typeof obj === 'object') {
@@ -231,9 +231,8 @@ export default class LoopManager {
    * - Updates object-based loops (`data-in`) if the associated object or its child properties change.
    *
    * @param {string} path - The path of the data in the store that has changed.
-   * @param {*} value - The new value at the given path.
    */
-  updateLoops(path, value) {
+  updateLoops(path) {
     Logger.debug('Updating data-for loops for ${path}', this.loops);
 
     this.loops.forEach((loopInfo, element) => {

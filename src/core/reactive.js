@@ -376,6 +376,7 @@ class Reactive extends EventEmitter {
       console.error(`Plugin ${name} not found`);
       return this;
     }
+    pluginInstance.options = { ...pluginInstance.options, ...options };
     pluginInstance.run();
     return this;
   }

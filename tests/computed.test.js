@@ -1,5 +1,4 @@
 import { describe, it, expect, waitFor } from '@olton/latte';
-import ComputedProps from '../src/reactive/computed.js';
 import Reactive from '../src/index.js';
 
 describe('ComputedProps', () => {

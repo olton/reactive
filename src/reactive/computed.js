@@ -84,15 +84,13 @@ export default class ComputedProps {
    * - Handles nested object dependencies
    * - Records all accessed properties during evaluation
    * - Emits computation events with results
-   * - Supports forced re-evaluation
    *
    * @method evaluate
    * @param {string} key - Computed property name
-   * @param {boolean} [force=false] - Force re-evaluation flag
    * @returns {*} New computed value
    * @emits compute
    */
-  async evaluate(key, force = false) {
+  async evaluate(key) {
     const computed = this.computed[key];
     const dependencies = new Set();
 
@@ -148,12 +146,10 @@ export default class ComputedProps {
    * - Direct property matches
    * - Nested property changes (parent changed)
    * - Parent property changes (child changed)
-   * Re-evaluates affected computed properties
    *
    * @method update
-   * @param {string} changedProp - Changed property path
    */
-  async update(changedProp) {
+  async update() {
     const updatePromises = [];
 
     for (const key in this.computed) {

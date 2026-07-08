@@ -44,7 +44,7 @@ describe('ReactiveStore', () => {
     const store = new ReactiveStore({ count: 0 }, reactive);
     let result = false;
 
-    store.on('change', (data) => {
+    store.on('change', () => {
       result = true;
     });
 
@@ -93,7 +93,7 @@ describe('ReactiveStore', () => {
     const store = new ReactiveStore({ count: 0 }, reactive);
     let result = false;
 
-    store.watch('count', (newValue, oldValue) => {
+    store.watch('count', () => {
       result = true;
     });
 

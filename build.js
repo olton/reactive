@@ -47,5 +47,5 @@ if (production) {
     ...options,
   });
 
-  await Promise.all([ctx.watch()]);
+  await ctx.watch();
 }

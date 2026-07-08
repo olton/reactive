@@ -1,33 +1,5 @@
-import { describe, it, expect, spy, mock, waitFor } from '@olton/latte';
+import { describe, it, expect, mock, waitFor } from '@olton/latte';
 import Reactive, { ReactivePlugin } from '../src/index.js';
-
-// Simple spy function to replace jest.spyOn
-function createSpy(obj, methodName) {
-  const originalMethod = obj[methodName];
-  const calls = [];
-
-  obj[methodName] = function (...args) {
-    calls.push(args);
-    return originalMethod.apply(this, args);
-  };
-
-  return {
-    calls,
-    mockRestore: function () {
-      obj[methodName] = originalMethod;
-    },
-  };
-}
-
-// Simple mock function to replace jest.fn()
-function createMock() {
-  const calls = [];
-  const mock = function (...args) {
-    calls.push(args);
-  };
-  mock.calls = calls;
-  return mock;
-}
 
 describe('Reactive', () => {
   it('should create a new instance with default options', () => {

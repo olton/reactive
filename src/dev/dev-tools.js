@@ -286,7 +286,7 @@ class ReactiveDevTools {
           return `Array(${value.length}) ${JSON.stringify(value, null, 2)}`;
         }
         return JSON.stringify(value, null, 2);
-      } catch (e) {
+      } catch {
         return String(value);
       }
     };
@@ -453,7 +453,7 @@ class ReactiveDevTools {
    * // This will toggle the panel's visibility between shown and hidden.
    */
   timeTravel(index) {
-    if (!this.options.timeTravel || true) return;
+    if (!this.options.timeTravel) return;
     if (index < 0 || index >= this.history.length) return;
 
     const snapshot = this.history[index];

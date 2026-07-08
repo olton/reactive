@@ -71,10 +71,11 @@ export default class Logger {
         method = console.log;
         break;
       default:
+        method = console.log;
         return;
     }
 
-    console.group(`%c Reactive: ${message}`, styles[styleType]);
+    method(`%c Reactive: ${message}`, styles[styleType]);
 
     if (data !== undefined) {
       console.log('%c Data:', styles.data, data);

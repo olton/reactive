@@ -39,6 +39,7 @@ export default class StateManager extends EventEmitter {
       localStorage.removeItem(test);
       return true;
     } catch (e) {
+      console.error('localStorage is not available:', e.message);
       return false;
     }
   }

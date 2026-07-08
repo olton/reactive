@@ -52,7 +52,7 @@ globalThis.updateCounter = (operator) => {
   } else {
     app.data.is_disabled = false;
   }
-  operator === '-' ? app.data.counter-- : app.data.counter++;
+  return operator === '-' ? app.data.counter-- : app.data.counter++;
 };
 
 globalThis.addItem = () => {
