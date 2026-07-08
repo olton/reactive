@@ -1,5 +1,18 @@
 import Reactive from '/src/index.js';
 
+let devToolsInstance = null;
+
+const removeDevToolsUi = () => {
+  const ids = ['reactive-devtools-panel', 'reactive-dev-tools-toggle-button', 'reactive-devtools-time-travel-dialog'];
+
+  ids.forEach((id) => {
+    const node = document.getElementById(id);
+    if (node) {
+      node.remove();
+    }
+  });
+};
+
 const app = new Reactive(
   {
     now: new Date().toLocaleTimeString('uk-UA'),
@@ -7,6 +20,7 @@ const app = new Reactive(
     step: 1,
     counterChanges: 0,
     lastAction: 'Система готова',
+    devToolsStarted: false,
 
     user: {
       name: 'Оксана',
@@ -101,6 +115,10 @@ const app = new Reactive(
 
     snapshotUnavailable() {
       return !globalThis.__snapshot;
+    },
+
+    devToolsActionText() {
+      return this.devToolsStarted ? 'Stop DevTools' : 'Run DevTools';
     },
   },
   {
@@ -205,4 +223,34 @@ globalThis.restoreSnapshot = () => {
 
   app.snapshot(globalThis.__snapshot);
   app.data.lastAction = 'Snapshot відновлено';
+};
+
+globalThis.startDevTools = () => {
+  if (!devToolsInstance) {
+    devToolsInstance = app.runDevTools({
+      enabled: true,
+      timeTravel: true,
+      maxSnapshots: 50,
+    });
+
+    app.data.devToolsStarted = true;
+    app.data.lastAction = 'DevTools запущено';
+    return;
+  }
+
+  if (app.data.devToolsStarted) {
+    devToolsInstance.options.enabled = false;
+    removeDevToolsUi();
+    app.data.devToolsStarted = false;
+    app.data.lastAction = 'DevTools вимкнено';
+    return;
+  }
+
+  devToolsInstance.options.enabled = true;
+  if (!document.getElementById('reactive-devtools-panel')) {
+    devToolsInstance.createDevToolsPanel();
+  }
+  devToolsInstance.updateDisplay();
+  app.data.devToolsStarted = true;
+  app.data.lastAction = 'DevTools увімкнено';
 };

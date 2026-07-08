@@ -181,24 +181,26 @@ export default class AttributeManager {
    * @param {string} expression - The reactive store expression to retrieve the value.
    */
   updateElementAttribute(element, attribute, expression) {
-    const value = '' + this.reactive.store.get(expression);
+    const value = this.reactive.store.get(expression);
 
-    if (value === undefined || value === 'undefined') {
+    if (value === undefined) {
       return;
     }
 
     Logger.debug(`AttributeManager: Updating attribute ${attribute} with ${value}`);
 
     if (attribute === 'class') {
-      element.className = value;
+      element.className = String(value);
     } else if (attribute === 'disabled' || attribute === 'checked' || attribute === 'selected' || attribute === 'readonly') {
-      if (value) {
+      const normalized = typeof value === 'string' ? !['', '0', 'false', 'off', 'no'].includes(value.trim().toLowerCase()) : Boolean(value);
+
+      if (normalized) {
         element.setAttribute(attribute, '');
       } else {
         element.removeAttribute(attribute);
       }
     } else {
-      element.setAttribute(attribute, value);
+      element.setAttribute(attribute, String(value));
     }
   }
 

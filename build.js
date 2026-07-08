@@ -10,7 +10,7 @@ const banner = `
 /*!
  * Reactive v${version}
  * Build: ${new Date().toLocaleString()}
- * Copyright 2012-${new Date().getFullYear()} by Serhii Pimenov
+ * Copyright ${new Date().getFullYear()} by Serhii Pimenov
  * Licensed under MIT
  */
 `;
@@ -21,6 +21,7 @@ const options = {
   bundle: true,
   sourcemap: false,
   format: 'esm',
+  minify: production,
   banner: {
     js: banner,
   },

@@ -101,6 +101,14 @@ h2 {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.meta-action {
+  margin-left: auto;
+  min-height: 34px;
+  padding: 8px 14px;
+  font-size: 13px;
 }
 
 .meta-pill {

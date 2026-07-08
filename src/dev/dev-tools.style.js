@@ -87,7 +87,9 @@ const DevToolsStyle = `
                 margin: 4px;
                 border: 1px solid #444;
                 cursor: pointer;
-                hover: background-color: #333;
+                &:hover {
+                    background-color: #333;
+                }
                 font-size: 12px;
                 
                 button {
