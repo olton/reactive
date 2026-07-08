@@ -2,7 +2,7 @@
 
 # Reactive
 
-Reactive – Is a reactive data model for two-way data binding
+Reactive – Is a reactive data model for two-way data binding directly in your HTML code without precompiling.
 
 </div>
 
