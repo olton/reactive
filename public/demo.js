@@ -35,6 +35,13 @@ const app = new Reactive(
     newTodoTitle: '',
     newTodoPriority: 'normal',
     search: '',
+    visibleTodos: [],
+    stats: {
+      total: 0,
+      done: 0,
+      open: 0,
+      progress: '0%',
+    },
 
     todos: [
       { title: 'Описати API в README', done: true, priority: 'normal' },
@@ -70,27 +77,6 @@ const app = new Reactive(
         : this.counter > 0 ? 'growth'
         : 'rollback'
       );
-    },
-
-    filteredTodos() {
-      const query = this.search.trim().toLowerCase();
-      if (!query) {
-        return this.todos;
-      }
-
-      return this.todos.filter((todo) => todo.title.toLowerCase().includes(query));
-    },
-
-    statsMap() {
-      const total = this.todos.length;
-      const done = this.todos.filter((todo) => todo.done).length;
-      const open = total - done;
-      return {
-        total,
-        done,
-        open,
-        progress: total === 0 ? '0%' : `${Math.round((done / total) * 100)}%`,
-      };
     },
 
     isClearDisabled() {
@@ -143,7 +129,30 @@ app.watch('counter', () => {
   app.data.counterChanges += 1;
 });
 
+const syncTodoViews = () => {
+  const query = app.data.search.trim().toLowerCase();
+  app.data.visibleTodos = query ? app.data.todos.filter((todo) => todo.title.toLowerCase().includes(query)) : [...app.data.todos];
+
+  const total = app.data.todos.length;
+  const done = app.data.todos.filter((todo) => todo.done).length;
+  const open = total - done;
+
+  app.data.stats = {
+    total,
+    done,
+    open,
+    progress: total === 0 ? '0%' : `${Math.round((done / total) * 100)}%`,
+  };
+};
+
+app.on('change', ({ path }) => {
+  if (path === 'search' || path === 'todos' || path.startsWith('todos.')) {
+    syncTodoViews();
+  }
+});
+
 app.init('#app');
+syncTodoViews();
 
 setInterval(() => {
   app.data.now = new Date().toLocaleTimeString('uk-UA');

@@ -117,10 +117,10 @@
             <button @click="removeCompletedTodos()" :disabled="isClearDisabled">Прибрати виконані</button>
           </div>
 
-          <p class="mono">Показано {{ filteredTodos.length }} / {{ todos.length }} задач</p>
+          <p class="mono">Показано {{ visibleTodos.length }} / {{ todos.length }} задач</p>
 
           <ul class="todo-list">
-            <li class="todo-item" data-for="todo, index in filteredTodos">
+            <li class="todo-item" data-for="todo, index in visibleTodos">
               <span>{{ index }}.</span>
               <span>{{ todo.title }}</span>
               <span class="chip chip-open">{{ todo.done }}</span>
@@ -129,7 +129,7 @@
           </ul>
 
           <div class="metrics">
-            <div class="metric" data-in="key in statsMap">{{ key }}: {{ statsMap[key] }}</div>
+            <div class="metric" data-in="key in stats">{{ key }}: {{ stats[key] }}</div>
           </div>
         </article>
 
