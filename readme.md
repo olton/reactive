@@ -14,7 +14,7 @@ Reactive – Is a reactive data model for two-way data binding directly in your 
 ![NPM Version](https://img.shields.io/npm/v/%40olton%2Freactive)
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?color=7852a9)
 ![Code size](https://img.shields.io/github/languages/code-size/olton/reactive.svg?color=green)
-![GitHub JS Size](https://img.shields.io/github/size/olton/reactive/dist%2Freactive.js?label=JS%20Size&color=8f99ff)
+![GitHub JS Size](![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/olton/reactive))
 
 </div>
 
