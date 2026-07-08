@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reactive Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./demo.css" />
+  </head>
+  <body>
+    <div class="bg-shape bg-shape-left"></div>
+    <div class="bg-shape bg-shape-right"></div>
+
+    <main id="app" class="shell">
+      <header class="hero card">
+        <p class="eyebrow">Reactive Library</p>
+        <p class="subtitle">
+          Двосторонній байндінг, computed-властивості, цикли, умовний рендер, data-bind, middleware, watcher та state snapshots.
+        </p>
+        <div class="hero-meta">
+          <span class="meta-pill">Час: {{ now }}</span>
+          <span class="meta-pill">Оновлень counter: {{ counterChanges }}</span>
+        </div>
+      </header>
+
+      <section class="grid">
+        <article class="card">
+          <h2>1) Профіль</h2>
+          <div class="form-grid">
+            <label>
+              Ім'я
+              <input type="text" data-reactive="user.name" placeholder="Введіть ім'я" />
+            </label>
+            <label>
+              Місто
+              <input type="text" data-reactive="user.city" placeholder="Введіть місто" />
+            </label>
+            <label>
+              Роль
+              <select data-reactive="user.role">
+                <option value="Frontend Developer">Frontend Developer</option>
+                <option value="Product Manager">Product Manager</option>
+                <option value="QA Engineer">QA Engineer</option>
+              </select>
+            </label>
+            <label class="inline">
+              <input type="checkbox" data-reactive="preferences.newsletter" />
+              Підписка на newsletter
+            </label>
+          </div>
+
+          <div class="result-box">
+            <div>Привіт, <strong>{{ user.name }}</strong> з міста <strong>{{ user.city }}</strong>.</div>
+            <div>Роль: <strong>{{ user.role }}</strong></div>
+            <div>Newsletter: <strong>{{ newsletterText }}</strong></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>2) Лічильник + computed + умови</h2>
+          <p class="mono">Стан: {{ counterState }}</p>
+
+          <div class="row">
+            <button @click="this.counter -= this.step">-</button>
+            <button @click="this.counter += this.step">+</button>
+            <button @click="this.counter = 0">Скинути</button>
+            <button @click="this.step = this.step === 1 ? 5 : 1">Крок: {{ step }}</button>
+          </div>
+
+          <div class="counter-row">
+            <div
+              data-bind='{"class":"counter > 0 ? \"badge badge-positive\" : counter < 0 ? \"badge badge-negative\" : \"badge badge-zero\""}'
+            >
+              Counter: {{ counter }}
+            </div>
+            <input type="number" data-reactive="counter" />
+          </div>
+
+          <div data-if="counter > 0" class="notice notice-positive">Позитивний сценарій</div>
+          <div data-else-if="counter < 0" class="notice notice-negative">Негативний сценарій</div>
+          <div data-else class="notice notice-zero">Нейтральний сценарій</div>
+        </article>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <h2>3) To-do (data-for, data-in, атрибути)</h2>
+
+          <div class="form-grid">
+            <label>
+              Назва задачі
+              <input type="text" data-reactive="newTodoTitle" placeholder="Наприклад, додати unit tests" />
+            </label>
+            <label>
+              Пріоритет
+              <select data-reactive="newTodoPriority">
+                <option value="low">low</option>
+                <option value="normal">normal</option>
+                <option value="high">high</option>
+              </select>
+            </label>
+            <label>
+              Пошук
+              <input type="text" data-reactive="search" placeholder="Фільтр задач" />
+            </label>
+          </div>
+
+          <div class="row">
+            <button @click="addTodo()">Додати</button>
+            <button @click="toggleLastTodo()">Перемкнути останню</button>
+            <button @click="removeCompletedTodos()" :disabled="isClearDisabled">Прибрати виконані</button>
+          </div>
+
+          <p class="mono">Показано {{ filteredTodos.length }} / {{ todos.length }} задач</p>
+
+          <ul class="todo-list">
+            <li class="todo-item" data-for="todo, index in filteredTodos">
+              <span>{{ index }}.</span>
+              <span>{{ todo.title }}</span>
+              <span class="chip chip-open">{{ todo.done }}</span>
+              <span class="chip chip-priority">{{ todo.priority }}</span>
+            </li>
+          </ul>
+
+          <div class="metrics">
+            <div class="metric" data-in="key in statsMap">{{ key }}: {{ statsMap[key] }}</div>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>4) Динамічний контент + StateManager</h2>
+          <div class="preview-wrap">
+            <img class="preview" :src="currentImageSrc" :alt="currentImageAlt" />
+          </div>
+          <p class="mono">Зображення {{ galleryPosition }} / {{ gallerySize }}</p>
+
+          <div class="row">
+            <button @click="prevImage()">Назад</button>
+            <button @click="nextImage()">Вперед</button>
+          </div>
+
+          <hr />
+
+          <div class="row">
+            <button @click="saveState()">Save</button>
+            <button @click="restoreState()">Restore</button>
+            <button @click="takeSnapshot()">Snapshot</button>
+            <button @click="restoreSnapshot()" :disabled="snapshotUnavailable">Restore Snapshot</button>
+          </div>
+          <p class="mono">Остання дія: {{ lastAction }}</p>
+        </article>
+      </section>
+    </main>
+
+    <script type="module" src="./demo.js"></script>
+  </body>
+</html>
