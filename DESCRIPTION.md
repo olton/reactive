@@ -63,35 +63,35 @@ Here's a simple example of how to use `Reactive`:
 import Reactive from '@olton/reactive';
 
 // Create a new reactive instance with initial data
-const model = new Reactive({
+const reactive = new Reactive({
   name: 'John',
   age: 30,
 });
 
-// Initialize the model on a DOM element
-model.init('#app');
+// Initialize the reactive instance on a DOM element
+reactive.init('#app');
 ```
 
-In your HTML, you can use template expressions to display data from the model:
+In your HTML, you can use template expressions to display data from the reactive instance:
 
 ```html
 <div id="app">
   <p>Name: {{name}}</p>
   <p>Age: {{age}}</p>
 
-  <input type="text" data-model="name" />
-  <input type="number" data-model="age" />
+  <input type="text" data-reactive="name" />
+  <input type="number" data-reactive="age" />
 </div>
 ```
 
-When the user types in the input fields, the model's data will update automatically, and the displayed values will update as well.
+When the user types in the input fields, the reactive instance's data will update automatically, and the displayed values will update as well.
 
 ### Computed Properties
 
 You can define computed properties that depend on other properties:
 
 ```javascript
-const model = new Reactive({
+const reactive = new Reactive({
   firstName: 'John',
   lastName: 'Doe',
   fullName: function () {
@@ -132,7 +132,7 @@ You can render lists of items using loops:
 In your model:
 
 ```javascript
-const model = new Reactive({
+const reactive = new Reactive({
   items: [{ name: 'Item 1' }, { name: 'Item 2' }, { name: 'Item 3' }],
 });
 ```
@@ -151,11 +151,11 @@ const state = Reactive.save();
 Reactive.restore();
 
 // Create a snapshot of the current state
-const model = new Reactive({ name: 'John', age: 30 });
-const snapshot = model.snapshot();
+const reactive = new Reactive({ name: 'John', age: 30 });
+const snapshot = reactive.snapshot();
 
 // Restore a snapshot
-model.snapshot(snapshot);
+reactive.snapshot(snapshot);
 ```
 
 ### Plugins
@@ -166,8 +166,8 @@ You can extend the functionality of `Reactive` using plugins:
 import Reactive, { ReactivePlugin } from '@olton/reactive';
 
 class MyPlugin extends ReactivePlugin {
-  constructor(model, options) {
-    super(model, options);
+  constructor(reactive, options) {
+    super(reactive, options);
   }
 
   run() {
@@ -175,7 +175,7 @@ class MyPlugin extends ReactivePlugin {
   }
 }
 
-const model = new Reactive(
+const reactive = new Reactive(
   {},
   {
     plugins: [{ name: 'myPlugin', plugin: MyPlugin }],
@@ -183,7 +183,7 @@ const model = new Reactive(
 );
 
 // Use the plugin
-model.usePlugin('myPlugin');
+reactive.usePlugin('myPlugin');
 ```
 
 ### Middleware
@@ -191,7 +191,7 @@ model.usePlugin('myPlugin');
 You can use middleware to intercept and modify state changes:
 
 ```javascript
-model.use((context, next) => {
+reactive.use((context, next) => {
   // Modify the context if needed
   console.log(`Property ${context.prop} changed from ${context.oldValue} to ${context.newValue}`);
 
@@ -202,10 +202,10 @@ model.use((context, next) => {
 
 ## Best Practices
 
-1. **Keep your model data simple**: Avoid circular references and complex nested structures.
+1. **Keep your reactive data simple**: Avoid circular references and complex nested structures.
 2. **Use computed properties for derived data**: Instead of updating multiple properties when one changes, use computed properties to derive values.
-3. **Validate your model**: Use the `validate()` method to check for potential issues like cyclic dependencies.
-4. **Clean up resources**: Call the `destroy()` method when you're done with a model to free up resources.
+3. **Validate your reactive instance**: Use the `validate()` method to check for potential issues like cyclic dependencies.
+4. **Clean up resources**: Call the `destroy()` method when you're done with a reactive instance to free up resources.
 
 ## Conclusion
 
