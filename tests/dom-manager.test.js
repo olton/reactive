@@ -8,7 +8,7 @@ describe('DOMManager', () => {
     const domManager = new DOMManager(reactive);
 
     expect(domManager).toBeDefined();
-    expect(domManager.model).toBe(reactive);
+    expect(domManager.reactive).toBe(reactive);
     expect(domManager.elements).toBeArray();
     expect(domManager.inputs).toBeArray();
     expect(domManager.domDependencies).toBeMap();

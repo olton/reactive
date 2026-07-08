@@ -22,7 +22,6 @@ export default class DOMManager {
     Logger.DEBUG_LEVEL = reactive.options.debug ? 4 : 0;
     Logger.debug('DOMManager: Init DOMManager');
 
-    this.model = reactive;
     this.reactive = reactive;
     this.elements = [];
     this.inputs = [];
