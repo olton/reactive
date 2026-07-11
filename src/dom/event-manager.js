@@ -1,6 +1,31 @@
 import Logger from '../logger/logger.js';
 
 export default class EventManager {
+  static KEY_MODIFIERS_MAP = {
+    enter: ['enter'],
+    tab: ['tab'],
+    delete: ['delete', 'backspace'],
+    esc: ['escape', 'esc'],
+    space: [' ', 'space', 'spacebar'],
+    up: ['arrowup', 'up'],
+    down: ['arrowdown', 'down'],
+    left: ['arrowleft', 'left'],
+    right: ['arrowright', 'right'],
+  };
+
+  static SYSTEM_MODIFIERS_MAP = {
+    ctrl: 'ctrlKey',
+    alt: 'altKey',
+    shift: 'shiftKey',
+    meta: 'metaKey',
+  };
+
+  static MOUSE_BUTTON_MODIFIERS_MAP = {
+    left: 0,
+    middle: 1,
+    right: 2,
+  };
+
   /**
    * Creates a copy of the event manager
    * @param {Object} domManager - DOM manager for working with DOM elements
@@ -34,14 +59,131 @@ export default class EventManager {
         if (attr.name.startsWith('@')) {
           Logger.debug(`EventManager: Found attribute with "@" ${attr.name} in`, element);
 
-          const eventName = attr.name.substring(1); // Убираем @ из имени атрибута
+          const { eventName, modifiers } = this.parseEventDescriptor(attr.name);
           const handler = attr.value.trim();
 
-          this.bindEventHandler(element, eventName, handler);
+          this.bindEventHandler(element, eventName, handler, modifiers);
           element.removeAttribute(attr.name); // Удаляем атрибут, чтобы избежать дублирования
         }
       });
     });
+  }
+
+  /**
+   * Parses event descriptor from attribute name.
+   * Example: @click.prevent.stop => { eventName: 'click', modifiers: ['prevent', 'stop'] }
+   * @param {string} attrName - Event attribute name
+   * @returns {{eventName: string, modifiers: string[]}}
+   */
+  parseEventDescriptor(attrName) {
+    const descriptor = attrName.startsWith('@') ? attrName.slice(1) : attrName;
+    const [eventName, ...mods] = descriptor.split('.').filter(Boolean);
+
+    return {
+      eventName,
+      modifiers: mods,
+    };
+  }
+
+  /**
+   * Converts event modifiers to addEventListener options.
+   * @param {string[]} modifiers - Event modifiers
+   * @returns {{capture: boolean, once: boolean, passive: boolean}}
+   */
+  getEventListenerOptions(modifiers = []) {
+    return {
+      capture: modifiers.includes('capture'),
+      once: modifiers.includes('once'),
+      passive: modifiers.includes('passive'),
+    };
+  }
+
+  /**
+   * Checks whether a modifier belongs to keyboard key modifiers.
+   * @param {string} modifier - Event modifier
+   * @returns {boolean}
+   */
+  isKeyModifier(modifier) {
+    return modifier in EventManager.KEY_MODIFIERS_MAP;
+  }
+
+  /**
+   * Checks whether a modifier belongs to system key modifiers.
+   * @param {string} modifier - Event modifier
+   * @returns {boolean}
+   */
+  isSystemModifier(modifier) {
+    return modifier in EventManager.SYSTEM_MODIFIERS_MAP;
+  }
+
+  /**
+   * Checks whether a modifier belongs to mouse button modifiers.
+   * @param {string} modifier - Event modifier
+   * @returns {boolean}
+   */
+  isMouseButtonModifier(modifier) {
+    return modifier in EventManager.MOUSE_BUTTON_MODIFIERS_MAP;
+  }
+
+  /**
+   * Determines whether the event has mouse button information.
+   * @param {Event} event - DOM event
+   * @returns {boolean}
+   */
+  isMouseButtonEvent(event) {
+    return 'button' in event && typeof event.button === 'number';
+  }
+
+  /**
+   * Validates mouse button against modifier.
+   * @param {Event} event - DOM event
+   * @param {string} modifier - Mouse button modifier
+   * @returns {boolean}
+   */
+  matchesMouseButtonModifier(event, modifier) {
+    const expectedButton = EventManager.MOUSE_BUTTON_MODIFIERS_MAP[modifier];
+    return event.button === expectedButton;
+  }
+
+  /**
+   * Validates system modifier state for event.
+   * @param {Event} event - DOM event
+   * @param {string} modifier - System modifier
+   * @returns {boolean}
+   */
+  matchesSystemModifier(event, modifier) {
+    const property = EventManager.SYSTEM_MODIFIERS_MAP[modifier];
+    return Boolean(event[property]);
+  }
+
+  /**
+   * Validates exact system modifiers combination.
+   * @param {Event} event - DOM event
+   * @param {string[]} requiredModifiers - Required system modifiers
+   * @returns {boolean}
+   */
+  matchesExactSystemModifiers(event, requiredModifiers = []) {
+    const requiredSet = new Set(requiredModifiers);
+
+    return Object.entries(EventManager.SYSTEM_MODIFIERS_MAP).every(([modifier, prop]) => {
+      return Boolean(event[prop]) === requiredSet.has(modifier);
+    });
+  }
+
+  /**
+   * Validates keyboard event key against modifier.
+   * @param {Event} event - DOM event
+   * @param {string} modifier - Keyboard modifier
+   * @returns {boolean}
+   */
+  matchesKeyModifier(event, modifier) {
+    if (!('key' in event) || typeof event.key !== 'string') {
+      return false;
+    }
+
+    const normalizedKey = event.key.toLowerCase();
+    const allowedKeys = EventManager.KEY_MODIFIERS_MAP[modifier];
+    return allowedKeys.includes(normalizedKey);
   }
 
   /**
@@ -50,11 +192,57 @@ export default class EventManager {
    * @param {string} eventName - Event name (without @)
    * @param {string} handlerExpression - Line with an event processor
    */
-  bindEventHandler(element, eventName, handlerExpression) {
+  bindEventHandler(element, eventName, handlerExpression, modifiers = []) {
     Logger.debug(`EventManager: Binding event handler with expression ${handlerExpression} for ${eventName} on`, element);
+
+    const listenerOptions = this.getEventListenerOptions(modifiers);
+    const hasExact = modifiers.includes('exact');
+    const requiredSystemModifiers = modifiers.filter((modifier) => this.isSystemModifier(modifier));
 
     const eventHandler = (event) => {
       try {
+        if (hasExact && !this.matchesExactSystemModifiers(event, requiredSystemModifiers)) {
+          return;
+        }
+
+        for (const modifier of modifiers) {
+          const handledAsMouseButton = this.isMouseButtonModifier(modifier) && this.isMouseButtonEvent(event);
+          if (handledAsMouseButton) {
+            if (!this.matchesMouseButtonModifier(event, modifier)) {
+              return;
+            }
+            continue;
+          }
+
+          if (this.isSystemModifier(modifier) && !this.matchesSystemModifier(event, modifier)) {
+            return;
+          }
+
+          if (this.isKeyModifier(modifier) && !this.matchesKeyModifier(event, modifier)) {
+            return;
+          }
+
+          if (modifier === 'self' && event.target !== element) {
+            return;
+          }
+
+          if (modifier === 'prevent') {
+            if (listenerOptions.passive) {
+              Logger.warn(`EventManager: .prevent cannot be used together with .passive for '${eventName}'`);
+              continue;
+            }
+            event.preventDefault();
+          }
+
+          if (modifier === 'stop') {
+            event.stopPropagation();
+          }
+        }
+
+        if (!handlerExpression) {
+          return;
+        }
+
         const context = {
           $reactive: this.reactive,
           $event: event,
@@ -139,11 +327,15 @@ export default class EventManager {
 
     const elementHandlers = this.eventHandlers.get(element);
     if (elementHandlers.has(eventName)) {
-      element.removeEventListener(eventName, elementHandlers.get(eventName));
+      const previousBinding = elementHandlers.get(eventName);
+      element.removeEventListener(eventName, previousBinding.handler, previousBinding.options);
     }
 
-    elementHandlers.set(eventName, eventHandler);
-    element.addEventListener(eventName, eventHandler);
+    elementHandlers.set(eventName, {
+      handler: eventHandler,
+      options: listenerOptions,
+    });
+    element.addEventListener(eventName, eventHandler, listenerOptions);
   }
 
   /**
@@ -157,8 +349,8 @@ export default class EventManager {
       const elementHandlers = this.eventHandlers.get(element);
 
       if (elementHandlers.has(eventName)) {
-        const handler = elementHandlers.get(eventName);
-        element.removeEventListener(eventName, handler);
+        const binding = elementHandlers.get(eventName);
+        element.removeEventListener(eventName, binding.handler, binding.options);
         elementHandlers.delete(eventName);
 
         if (elementHandlers.size === 0) {
@@ -176,10 +368,10 @@ export default class EventManager {
     Logger.debug('EventManager: Updating events for', element);
     Array.from(element.attributes || []).forEach((attr) => {
       if (attr.name.startsWith('@')) {
-        const eventName = attr.name.substring(1);
+        const { eventName, modifiers } = this.parseEventDescriptor(attr.name);
         const handler = attr.value.trim();
 
-        this.bindEventHandler(element, eventName, handler);
+        this.bindEventHandler(element, eventName, handler, modifiers);
         element.removeAttribute(attr.name);
       }
     });
@@ -191,9 +383,9 @@ export default class EventManager {
   destroy() {
     Logger.debug('EventManager: Destroying EventManager');
     this.eventHandlers.forEach((handlers, element) => {
-      handlers.forEach((handler, eventName) => {
+      handlers.forEach((binding, eventName) => {
         Logger.debug(`EventManager: Removing event handler for ${eventName} on`, element);
-        element.removeEventListener(eventName, handler);
+        element.removeEventListener(eventName, binding.handler, binding.options);
       });
     });
 

@@ -18,15 +18,14 @@
     "url": "https://github.com/olton/reactive.git"
   },
   "license": "MIT",
-  "main": "dist/model.js",
   "type": "module",
-  "types": "types/reactive.d.ts",
+  "main": "dist/reactive.js",
+  "types": "dist/reactive.d.ts",
   "files": [
-    "dist",
-    "types"
+    "dist"
   ],
   "scripts": {
-    "clean": "shx rm -rf lib/*",
+    "clean": "shx rm -rf dist/*",
     "build": "npm run clean && cross-env NODE_NO_WARNINGS=1 MODE=production node build.js",
     "dev": "npm run clean && cross-env NODE_NO_WARNINGS=1 MODE=development node build.js",
     "pub": "npm run build && npm publish --access public",

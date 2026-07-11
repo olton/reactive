@@ -1,6 +1,7 @@
 import { build, context } from 'esbuild';
 import progress from '@olton/esbuild-plugin-progress';
 import { replace } from 'esbuild-plugin-replace';
+import { copyFile, mkdir } from 'node:fs/promises';
 import pkg from './package.json' with { type: 'json' };
 
 const production = process.env.MODE === 'production';
@@ -38,15 +39,24 @@ const options = {
 };
 const drop = [];
 
+const copyTypesToDist = async () => {
+  await mkdir('./dist', { recursive: true });
+  await copyFile('./types/reactive.d.ts', './dist/reactive.d.ts');
+};
+
 if (production) {
   await build({
     ...options,
     drop,
   });
+
+  await copyTypesToDist();
 } else {
   const ctx = await context({
     ...options,
   });
+
+  await copyTypesToDist();
 
   await ctx.watch();
 }
