@@ -257,7 +257,7 @@ describe('DOMManager', () => {
     root.appendChild(template);
 
     const host = document.createElement('div');
-    host.setAttribute('data-component', 'card-component');
+    host.setAttribute('data-template', 'card-component');
 
     const title = document.createElement('h3');
     title.setAttribute('slot', 'title');
@@ -301,7 +301,7 @@ describe('DOMManager', () => {
     root.appendChild(template);
 
     const host = document.createElement('div');
-    host.setAttribute('data-component', 'profile-card');
+    host.setAttribute('data-template', 'profile-card');
     host.setAttribute('data-props', '{ title: user.name, cityName: user.city, stateActive: isActive }');
     root.appendChild(host);
 
@@ -333,7 +333,7 @@ describe('DOMManager', () => {
       <template id="editor-card">
         <input data-model="nameValue" />
       </template>
-      <div data-component="editor-card" data-props="{ nameValue: sync:user.name }"></div>
+      <div data-template="editor-card" data-props="{ nameValue: sync:user.name }"></div>
     `;
 
     domManager.bindDOM(root);
@@ -357,7 +357,7 @@ describe('DOMManager', () => {
       <template id="read-card">
         <input data-model="nameValue" />
       </template>
-      <div data-component="read-card" data-props="{ nameValue: user.name }"></div>
+      <div data-template="read-card" data-props="{ nameValue: user.name }"></div>
     `;
 
     domManager.bindDOM(root);
@@ -384,7 +384,7 @@ describe('DOMManager', () => {
     root.innerHTML = `
       <template id="life-card"><p>{{nameValue}}</p></template>
       <div
-        data-component="life-card"
+        data-template="life-card"
         data-props="{ nameValue: user.name }"
         data-on-mounted="onMountedHook"
         data-on-updated="onUpdatedHook"
@@ -428,8 +428,8 @@ describe('DOMManager', () => {
     const root = document.createElement('div');
     root.innerHTML = `
       <template id="cache-card"><p>cache</p></template>
-      <div data-component="cache-card"></div>
-      <div data-component="cache-card"></div>
+      <div data-template="cache-card"></div>
+      <div data-template="cache-card"></div>
     `;
 
     domManager.bindDOM(root);
@@ -451,7 +451,7 @@ describe('DOMManager', () => {
           <slot name="title" :item="user"></slot>
         </section>
       </template>
-      <div data-component="scope-card">
+      <div data-template="scope-card">
         <h3 slot="title">{{item.name}}</h3>
       </div>
     `;
@@ -481,7 +481,7 @@ describe('DOMManager', () => {
           <slot name="body" data-slot-props="{ location: user.city }"></slot>
         </section>
       </template>
-      <div data-component="scope-object-card">
+      <div data-template="scope-object-card">
         <p slot="body">{{location}}</p>
       </div>
     `;

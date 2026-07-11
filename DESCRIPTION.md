@@ -182,9 +182,9 @@ const reactive = new Reactive({
 });
 ```
 
-### Slots (Vue-like content projection)
+### Slots (content projection)
 
-Reactive supports Vue-like slot projection with default and named slots.
+Reactive supports slot projection with default and named slots.
 
 Default slot:
 
@@ -222,7 +222,7 @@ You can pass slot props with `:alias="path"` directly on `<slot>`:
   </section>
 </template>
 
-<div data-component="scope-card">
+<div data-template="scope-card">
   <h3 slot="title">{{item.name}}</h3>
 </div>
 ```
@@ -236,14 +236,14 @@ Or with object syntax via `data-slot-props`:
   </section>
 </template>
 
-<div data-component="scope-object-card">
+<div data-template="scope-object-card">
   <p slot="body">{{location}}</p>
 </div>
 ```
 
 ### Runtime components without compilation
 
-You can compose reusable UI blocks directly in HTML using `<template>` and `data-component`.
+You can compose reusable UI blocks directly in HTML using `<template>` and `data-template`.
 
 ```html
 <template id="user-card">
@@ -254,7 +254,7 @@ You can compose reusable UI blocks directly in HTML using `<template>` and `data
   </article>
 </template>
 
-<div data-component="user-card">
+<div data-template="user-card">
   <h3 slot="title">Profile</h3>
   <p>{{ user.city }}</p>
 </div>
@@ -272,7 +272,7 @@ You can also map local template aliases to reactive store paths using `data-prop
   </article>
 </template>
 
-<div data-component="profile-card" data-props="{ title: user.name, cityName: user.city, stateActive: isActive }"></div>
+<div data-template="profile-card" data-props="{ title: user.name, cityName: user.city, stateActive: isActive }"></div>
 ```
 
 Aliases from `data-props` are resolved at runtime and stay reactive because they are mapped to store paths.
@@ -284,7 +284,7 @@ For two-way props with `data-model`, use `sync:` prefix:
   <label>Name <input data-model="nameValue" /></label>
 </template>
 
-<div data-component="editor-card" data-props="{ nameValue: sync:user.name }"></div>
+<div data-template="editor-card" data-props="{ nameValue: sync:user.name }"></div>
 ```
 
 Without `sync:`, prop aliases are one-way and do not write back to source path.
@@ -293,7 +293,7 @@ You can also register lifecycle hooks on the host element:
 
 ```html
 <div
-  data-component="user-card"
+  data-template="user-card"
   data-on-mounted="onCardMounted"
   data-on-updated="onCardUpdated"
   data-on-before-unmount="onCardBeforeUnmount"

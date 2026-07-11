@@ -403,16 +403,16 @@ export default class DOMManager {
   }
 
   /**
-   * Mounts runtime components declared with `data-component`.
+   * Mounts runtime components declared with `data-template`.
    * Component template is resolved from `<template id="...">` and projected with light DOM content.
    *
    * @param {HTMLElement} rootElement - Root element to process.
    */
   processRuntimeComponents(rootElement) {
-    const componentHosts = rootElement.querySelectorAll('[data-component]');
+    const componentHosts = rootElement.querySelectorAll('[data-template]');
 
     componentHosts.forEach((host) => {
-      const reference = (host.getAttribute('data-component') || '').trim();
+      const reference = (host.getAttribute('data-template') || '').trim();
       if (!reference) {
         return;
       }
@@ -422,7 +422,7 @@ export default class DOMManager {
 
       if (!(template instanceof HTMLTemplateElement)) {
         Logger.warn(`DOMManager: template ${selector} not found for component host`, host);
-        this.addDiagnostic('warn', `Template '${selector}' not found for data-component`);
+        this.addDiagnostic('warn', `Template '${selector}' not found for data-template`);
         return;
       }
 
@@ -446,7 +446,7 @@ export default class DOMManager {
         host.appendChild(mountRoot.firstChild);
       }
 
-      host.removeAttribute('data-component');
+      host.removeAttribute('data-template');
       host.removeAttribute('data-props');
 
       const propsSources = new Set();
