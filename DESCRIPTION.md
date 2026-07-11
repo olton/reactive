@@ -79,8 +79,8 @@ In your HTML, you can use template expressions to display data from the reactive
   <p>Name: {{name}}</p>
   <p>Age: {{age}}</p>
 
-  <input type="text" data-reactive="name" />
-  <input type="number" data-reactive="age" />
+  <input type="text" data-model="name" />
+  <input type="number" data-model="age" />
 </div>
 ```
 

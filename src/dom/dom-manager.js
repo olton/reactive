@@ -148,11 +148,11 @@ export default class DOMManager {
       this.virtualDom.set(node, node.textContent);
     }
 
-    Logger.debug('DOMManager: Find inputs with data-reactive directive...');
-    const inputs = root.querySelectorAll('[data-reactive]');
-    Logger.debug('DOMManager: Found inputs with data-reactive:', inputs.length);
+    Logger.debug('DOMManager: Find inputs with data-model directive...');
+    const inputs = root.querySelectorAll('[data-model]');
+    Logger.debug('DOMManager: Found inputs with data-model:', inputs.length);
     inputs.forEach((input) => {
-      const property = input.getAttribute('data-reactive');
+      const property = input.getAttribute('data-model');
 
       Logger.debug('DOMManager: Register handler for:', { input, property });
 
@@ -210,7 +210,7 @@ export default class DOMManager {
    * Updates all DOM elements based on the current state of the reactive store.
    * This includes:
    * - Text nodes containing template placeholders.
-   * - Input elements bound using `data-reactive` attributes.
+   * - Input elements bound using `data-model` attributes.
    *
    * Iterates through registered nodes and inputs, updating their content
    * or values to reflect the latest reactive store state.

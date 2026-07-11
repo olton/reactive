@@ -35,22 +35,22 @@
           <div class="form-grid">
             <label>
               Ім'я
-              <input type="text" data-reactive="user.name" placeholder="Введіть ім'я" />
+              <input type="text" data-model="user.name" placeholder="Введіть ім'я" />
             </label>
             <label>
               Місто
-              <input type="text" data-reactive="user.city" placeholder="Введіть місто" />
+              <input type="text" data-model="user.city" placeholder="Введіть місто" />
             </label>
             <label>
               Роль
-              <select data-reactive="user.role">
+              <select data-model="user.role">
                 <option value="Frontend Developer">Frontend Developer</option>
                 <option value="Product Manager">Product Manager</option>
                 <option value="QA Engineer">QA Engineer</option>
               </select>
             </label>
             <label class="inline">
-              <input type="checkbox" data-reactive="preferences.newsletter" />
+              <input type="checkbox" data-model="preferences.newsletter" />
               Підписка на newsletter
             </label>
           </div>
@@ -79,7 +79,7 @@
             >
               Counter: {{ counter }}
             </div>
-            <input type="number" data-reactive="counter" />
+            <input type="number" data-model="counter" />
           </div>
 
           <div data-if="counter > 0" class="notice notice-positive">Позитивний сценарій</div>
@@ -95,11 +95,11 @@
           <div class="form-grid">
             <label>
               Назва задачі
-              <input type="text" data-reactive="newTodoTitle" placeholder="Наприклад, додати unit tests" />
+              <input type="text" data-model="newTodoTitle" placeholder="Наприклад, додати unit tests" />
             </label>
             <label>
               Пріоритет
-              <select data-reactive="newTodoPriority">
+              <select data-model="newTodoPriority">
                 <option value="low">low</option>
                 <option value="normal">normal</option>
                 <option value="high">high</option>
@@ -107,7 +107,7 @@
             </label>
             <label>
               Пошук
-              <input type="text" data-reactive="search" placeholder="Фільтр задач" />
+              <input type="text" data-model="search" placeholder="Фільтр задач" />
             </label>
           </div>
 

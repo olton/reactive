@@ -64,10 +64,10 @@ describe('DOMManager', () => {
 
     // Create and register inputs
     const input1 = document.createElement('input');
-    input1.setAttribute('data-reactive', 'user.name');
+    input1.setAttribute('data-model', 'user.name');
 
     const input2 = document.createElement('input');
-    input2.setAttribute('data-reactive', 'user.email');
+    input2.setAttribute('data-model', 'user.email');
 
     domManager.inputs.push({ element: input1, property: 'user.name' }, { element: input2, property: 'user.email' });
 
@@ -100,10 +100,10 @@ describe('DOMManager', () => {
 
     // Create and register inputs
     const nameInput = document.createElement('input');
-    nameInput.setAttribute('data-reactive', 'user.name');
+    nameInput.setAttribute('data-model', 'user.name');
 
     const ageInput = document.createElement('input');
-    ageInput.setAttribute('data-reactive', 'user.age');
+    ageInput.setAttribute('data-model', 'user.age');
 
     domManager.inputs.push({ element: nameInput, property: 'user.name' }, { element: ageInput, property: 'user.age' });
 
