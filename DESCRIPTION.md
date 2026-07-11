@@ -182,6 +182,24 @@ const reactive = new Reactive({
 });
 ```
 
+### Dynamic class binding (`:class`)
+
+You can bind any number of classes with object syntax. Each value is evaluated as a boolean.
+
+```html
+<div :class="{ 'block-color': isBlack, disabled: isDisabled, visible: isVisible }">Status block</div>
+```
+
+```javascript
+const reactive = new Reactive({
+  isBlack: true,
+  isDisabled: false,
+  isVisible: true,
+});
+```
+
+In this example, `block-color` and `visible` are added, while `disabled` is removed.
+
 ### Slots (content projection)
 
 Reactive supports slot projection with default and named slots.

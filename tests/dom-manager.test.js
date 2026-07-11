@@ -190,6 +190,35 @@ describe('DOMManager', () => {
     expect(target.classList.contains('active')).toBe(false);
   });
 
+  it('should support arbitrary class names with boolean object syntax', async () => {
+    const reactive = new Reactive({
+      isBlack: false,
+      isDisabled: true,
+      isVisible: false,
+    });
+    const domManager = reactive.dom;
+
+    const root = document.createElement('div');
+    const target = document.createElement('div');
+    target.setAttribute(':class', "{ 'block-color': isBlack, disabled: isDisabled, visible: isVisible }");
+    root.appendChild(target);
+
+    domManager.bindDOM(root);
+
+    expect(target.classList.contains('block-color')).toBe(false);
+    expect(target.classList.contains('disabled')).toBe(true);
+    expect(target.classList.contains('visible')).toBe(false);
+
+    reactive.data.isBlack = true;
+    reactive.data.isDisabled = false;
+    reactive.data.isVisible = true;
+    await waitFor(20);
+
+    expect(target.classList.contains('block-color')).toBe(true);
+    expect(target.classList.contains('disabled')).toBe(false);
+    expect(target.classList.contains('visible')).toBe(true);
+  });
+
   it('should project default slot content', () => {
     const reactive = new Reactive({ message: 'Hello Slot' });
     const domManager = reactive.dom;
