@@ -1,7 +1,7 @@
 {
   "author": "Serhii Pimenov <serhii@pimenov.com.ua>",
   "name": "@olton/reactive",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Reactive model with two-way data binding directly in your HTML.",
   "keywords": [
     "javascript",
