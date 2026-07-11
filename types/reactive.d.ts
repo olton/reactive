@@ -4,27 +4,27 @@
 
 declare module '@olton/reactive' {
   /**
-   * Default options for the Reactive class.
+  * Default options for the Reactive class.
    */
   interface ModelOptions {
     /**
      * Identifier for the model instance
-     * @default "reactive"
+    * @default "reactive"
      */
     id: string;
-
+    
     /**
      * Whether to use simple expressions in templates
      * @default true
      */
     useSimpleExpressions?: boolean;
-
+    
     /**
      * Enable debug mode for verbose logging
      * @default false
      */
     debug?: boolean;
-
+    
     plugins?: Array<{
       name: string;
       plugin: Function;
@@ -49,17 +49,17 @@ declare module '@olton/reactive' {
     /**
      * Items added to the array
      */
-    added: Array<{ index: number; item: any }>;
-
+    added: Array<{index: number, item: any}>;
+    
     /**
      * Items removed from the array
      */
-    removed: Array<{ index: number; item: any }>;
-
+    removed: Array<{index: number, item: any}>;
+    
     /**
      * Items moved within the array
      */
-    moved: Array<{ oldIndex: number; newIndex: number; item: any }>;
+    moved: Array<{oldIndex: number, newIndex: number, item: any}>;
   }
 
   /**
@@ -70,12 +70,12 @@ declare module '@olton/reactive' {
      * Function that calculates the property value
      */
     getter: () => any;
-
+    
     /**
      * Cached value of the computed property
      */
     value: any;
-
+    
     /**
      * List of dependencies for this computed property
      */
@@ -95,7 +95,7 @@ declare module '@olton/reactive' {
       path?: string;
       message: string;
     }>;
-
+    
     /**
      * Array of validation warnings
      */
@@ -115,7 +115,7 @@ declare module '@olton/reactive' {
      * The data in the snapshot
      */
     data: any;
-
+    
     /**
      * Timestamp when the snapshot was created
      */
@@ -130,27 +130,27 @@ declare module '@olton/reactive' {
      * Property being changed
      */
     prop: string;
-
+    
     /**
      * Previous value
      */
     oldValue: any;
-
+    
     /**
      * New value
      */
     newValue: any;
-
+    
     /**
      * Flag to prevent the change
      */
     preventDefault: boolean;
-
+    
     /**
      * For array operations, the method being called
      */
     method?: string;
-
+    
     /**
      * For array operations, the arguments to the method
      */
@@ -165,17 +165,17 @@ declare module '@olton/reactive' {
      * DOM element
      */
     element: HTMLElement;
-
+    
     /**
      * Type of dependency
      */
     type: string;
-
+    
     /**
      * Original template text for template dependencies
      */
     template?: string;
-
+    
     /**
      * Additional properties
      */
@@ -190,7 +190,7 @@ declare module '@olton/reactive' {
      * Input element
      */
     element: HTMLInputElement;
-
+    
     /**
      * Property path bound to the input
      */

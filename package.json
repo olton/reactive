@@ -20,7 +20,7 @@
   "license": "MIT",
   "main": "dist/model.js",
   "type": "module",
-  "types": "types/model.d.ts",
+  "types": "types/reactive.d.ts",
   "files": [
     "dist",
     "types"
