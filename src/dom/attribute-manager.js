@@ -152,16 +152,109 @@ export default class AttributeManager {
 
           this.updateElementAttribute(element, realAttrName, expression);
 
-          this.domManager.registerDomDependency(expression, element, {
-            type: 'attribute',
-            attribute: realAttrName,
-            expression: expression,
+          const dependencies = this.extractDependenciesForAttribute(realAttrName, expression);
+          dependencies.forEach((dependency) => {
+            this.domManager.registerDomDependency(dependency, element, {
+              type: 'attribute',
+              attribute: realAttrName,
+              expression: expression,
+            });
           });
 
           element.removeAttribute(attr.name);
         }
       }
     }
+  }
+
+  /**
+   * Returns dependency paths for a bound attribute expression.
+   * For object class binding, dependencies are extracted from value expressions only.
+   * @param {string} attribute - Bound attribute name
+   * @param {string} expression - Binding expression
+   * @returns {string[]}
+   */
+  extractDependenciesForAttribute(attribute, expression) {
+    if (attribute === 'class' && this.isObjectExpression(expression)) {
+      const classEntries = this.parseObjectExpressionEntries(expression);
+      const dependencies = new Set();
+
+      classEntries.forEach(([, valueExpression]) => {
+        ExpressionManager.extractVariables(valueExpression).forEach((variable) => dependencies.add(variable));
+      });
+
+      return Array.from(dependencies);
+    }
+
+    return ExpressionManager.extractVariables(expression);
+  }
+
+  isObjectExpression(expression) {
+    const normalized = String(expression || '').trim();
+    return normalized.startsWith('{') && normalized.endsWith('}');
+  }
+
+  /**
+   * Parses object-like expression entries: { key: value, key2: value2 }
+   * @param {string} expression - Object-like expression
+   * @returns {Array<[string, string]>}
+   */
+  parseObjectExpressionEntries(expression) {
+    const body = expression.trim().slice(1, -1);
+    const entries = [];
+    let current = '';
+    let quote = null;
+    let depth = 0;
+
+    for (let i = 0; i < body.length; i++) {
+      const ch = body[i];
+
+      if ((ch === '"' || ch === "'") && body[i - 1] !== '\\') {
+        quote = quote === ch ? null : quote || ch;
+      }
+
+      if (!quote) {
+        if (ch === '{' || ch === '[' || ch === '(') depth += 1;
+        if (ch === '}' || ch === ']' || ch === ')') depth -= 1;
+
+        if (ch === ',' && depth === 0) {
+          if (current.trim()) entries.push(current.trim());
+          current = '';
+          continue;
+        }
+      }
+
+      current += ch;
+    }
+
+    if (current.trim()) {
+      entries.push(current.trim());
+    }
+
+    return entries
+      .map((entry) => {
+        const delimiterIndex = entry.indexOf(':');
+        if (delimiterIndex === -1) {
+          const shorthand = entry.trim();
+          return [shorthand, shorthand];
+        }
+
+        const key = entry.slice(0, delimiterIndex).trim();
+        const value = entry.slice(delimiterIndex + 1).trim();
+        return [key, value];
+      })
+      .filter(([, value]) => value.length > 0);
+  }
+
+  evaluateClassObjectExpression(expression, context) {
+    const result = {};
+
+    this.parseObjectExpressionEntries(expression).forEach(([rawKey, valueExpression]) => {
+      const normalizedKey = rawKey.replace(/^['"]|['"]$/g, '').trim();
+      result[normalizedKey] = Boolean(ExpressionManager.evaluateExpression(valueExpression, context));
+    });
+
+    return result;
   }
 
   /**
@@ -181,7 +274,20 @@ export default class AttributeManager {
    * @param {string} expression - The reactive store expression to retrieve the value.
    */
   updateElementAttribute(element, attribute, expression) {
-    const value = this.reactive.store.get(expression);
+    const context = { ...this.reactive.store.getState() };
+    let value;
+
+    if (attribute === 'class' && this.isObjectExpression(expression)) {
+      value = this.evaluateClassObjectExpression(expression, context);
+    } else {
+      value = ExpressionManager.evaluateExpression(expression, context);
+      if (value === false) {
+        const directValue = this.reactive.store.get(expression);
+        if (directValue !== undefined) {
+          value = directValue;
+        }
+      }
+    }
 
     if (value === undefined) {
       return;
@@ -190,7 +296,13 @@ export default class AttributeManager {
     Logger.debug(`AttributeManager: Updating attribute ${attribute} with ${value}`);
 
     if (attribute === 'class') {
-      element.className = String(value);
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        Object.entries(value).forEach(([className, enabled]) => {
+          element.classList.toggle(className, Boolean(enabled));
+        });
+      } else {
+        element.className = String(value);
+      }
     } else if (attribute === 'disabled' || attribute === 'checked' || attribute === 'selected' || attribute === 'readonly') {
       const normalized = typeof value === 'string' ? !['', '0', 'false', 'off', 'no'].includes(value.trim().toLowerCase()) : Boolean(value);
 

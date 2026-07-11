@@ -77,6 +77,68 @@ describe('Reactive', () => {
     expect(model.store.watch).toHaveBeenCalled();
   });
 
+  it('should watch getter source changes', async () => {
+    const model = new Reactive({ firstName: 'John', lastName: 'Doe' });
+    const callback = mock();
+
+    model.watch((state) => `${state.firstName} ${state.lastName}`, callback);
+
+    model.data.firstName = 'Jane';
+    await waitFor(20);
+
+    expect(callback).toHaveBeenCalled();
+    const [newValue, oldValue, onCleanup] = callback.mock.calls[0];
+    expect(newValue).toBe('Jane Doe');
+    expect(oldValue).toBe('John Doe');
+    expect(typeof onCleanup).toBe('function');
+  });
+
+  it('should support watch immediate option', () => {
+    const model = new Reactive({ count: 1 });
+    const callback = mock();
+
+    model.watch('count', callback, { immediate: true });
+
+    const [newValue, oldValue, onCleanup] = callback.mock.calls[0];
+    expect(newValue).toBe(1);
+    expect(oldValue).toBe(undefined);
+    expect(typeof onCleanup).toBe('function');
+  });
+
+  it('should support deep path watch', async () => {
+    const model = new Reactive({ user: { profile: { name: 'John' } } });
+    const callback = mock();
+
+    model.watch('user', callback, { deep: true });
+
+    model.data.user.profile.name = 'Jane';
+    await waitFor(20);
+
+    expect(callback).toHaveBeenCalled();
+    const [newValue] = callback.mock.calls[0];
+    expect(newValue.profile.name).toBe('Jane');
+  });
+
+  it('should stop watching and run cleanup on stop', async () => {
+    const model = new Reactive({ count: 0 });
+    const callback = mock();
+    const cleanup = mock();
+
+    const stop = model.watch('count', (newValue, oldValue, onCleanup) => {
+      callback(newValue, oldValue);
+      onCleanup(cleanup);
+    });
+
+    model.data.count = 1;
+    await waitFor(20);
+    stop();
+    model.data.count = 2;
+    await waitFor(20);
+
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(cleanup).toHaveBeenCalledTimes(1);
+  });
+
   it('should batch updates', () => {
     const model = new Reactive({ count: 0, total: 0 });
 

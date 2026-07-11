@@ -4,6 +4,7 @@ import ReactiveStore from '../reactive/reactive-store.js';
 import DOMManager from '../dom/dom-manager.js';
 import ComputedProps from '../reactive/computed.js';
 import StateManager from '../state-manager/state-manager.js';
+import ExpressionManager from '../utils/expression-manager.js';
 import Logger from '../logger/logger.js';
 
 /**
@@ -14,6 +15,9 @@ const ReactiveOptions = {
   id: 'reactive',
   useSimpleExpressions: true,
   debug: false,
+  safeExpressions: false,
+  devDiagnostics: false,
+  runtimeTemplateCache: true,
   plugins: [],
   validators: [],
   formatters: [],
@@ -60,6 +64,15 @@ class Reactive extends EventEmitter {
     this.computedProps = new ComputedProps(this, this.computed);
     this.stateManager = new StateManager(this.store);
     this.plugins = new Map();
+
+    ExpressionManager.setOptions({
+      safeMode: Boolean(this.options.safeExpressions),
+      onUnsafeExpression: (expression) => {
+        if (this.options.devDiagnostics) {
+          this.dom.addDiagnostic('warn', `Unsafe expression blocked: ${expression}`);
+        }
+      },
+    });
 
     if (this.options.plugins) {
       for (const p of this.options.plugins) {
@@ -147,12 +160,132 @@ class Reactive extends EventEmitter {
   }
 
   /**
-   * Watches a specific path in the state and triggers a callback on changes.
-   * @param {string} path - Path to watch.
-   * @param {Function} callback - Callback function to execute when the path changes.
+   * Watches a reactive source and triggers callback when it changes.
+   * Supports source as a state path or a getter function.
+   *
+   * @param {string|Function} source - Path to watch or getter function.
+   * @param {Function} callback - Callback function (newValue, oldValue, onCleanup).
+   * @param {{ immediate?: boolean, deep?: boolean }} [options={}] - Watch options.
+   * @returns {Function} Stop function to unsubscribe watcher.
    */
-  watch(path, callback) {
-    this.store.watch(path, callback);
+  watch(source, callback, options = {}) {
+    if (typeof callback !== 'function') {
+      throw new Error('Reactive.watch: callback must be a function');
+    }
+
+    const watchOptions = {
+      immediate: false,
+      deep: false,
+      ...options,
+    };
+
+    let cleanup;
+    const onCleanup = (cleanupFn) => {
+      cleanup = typeof cleanupFn === 'function' ? cleanupFn : undefined;
+    };
+
+    const runCleanup = () => {
+      if (typeof cleanup === 'function') {
+        cleanup();
+      }
+      cleanup = undefined;
+    };
+
+    const cloneDeep = (value) => {
+      if (value === null || value === undefined) {
+        return value;
+      }
+
+      try {
+        if (typeof structuredClone === 'function') {
+          return structuredClone(value);
+        }
+      } catch {}
+
+      try {
+        return JSON.parse(JSON.stringify(value));
+      } catch {
+        return value;
+      }
+    };
+
+    const runCallback = (newValue, oldValue) => {
+      runCleanup();
+      callback(newValue, oldValue, onCleanup);
+    };
+
+    if (typeof source === 'string') {
+      if (!watchOptions.deep) {
+        const stop = this.store.watch(source, (newValue, oldValue) => {
+          runCallback(newValue, oldValue);
+        });
+
+        if (watchOptions.immediate) {
+          runCallback(this.store.get(source), undefined);
+        }
+
+        return () => {
+          runCleanup();
+          stop();
+        };
+      }
+
+      const isPathDependency = (basePath, changedPath) => {
+        return changedPath === basePath || changedPath.startsWith(`${basePath}.`) || changedPath.startsWith(`${basePath}[`);
+      };
+
+      let oldSnapshot = cloneDeep(this.store.get(source));
+
+      const stop = this.store.on('change', (change) => {
+        if (!change || !isPathDependency(source, change.path)) {
+          return;
+        }
+
+        const newValue = this.store.get(source);
+        const previousValue = oldSnapshot;
+        oldSnapshot = cloneDeep(newValue);
+        runCallback(newValue, previousValue);
+      });
+
+      if (watchOptions.immediate) {
+        runCallback(this.store.get(source), undefined);
+      }
+
+      return () => {
+        runCleanup();
+        stop();
+      };
+    }
+
+    if (typeof source === 'function') {
+      let oldValue = source(this.data);
+      let oldSnapshot = watchOptions.deep ? cloneDeep(oldValue) : oldValue;
+
+      const stop = this.store.on('change', () => {
+        const newValue = source(this.data);
+        const newSnapshot = watchOptions.deep ? cloneDeep(newValue) : newValue;
+
+        if (!watchOptions.deep && Object.is(newSnapshot, oldSnapshot)) {
+          return;
+        }
+
+        const previousValue = oldValue;
+        oldValue = newValue;
+        oldSnapshot = newSnapshot;
+        runCallback(newValue, previousValue);
+      });
+
+      if (watchOptions.immediate) {
+        runCallback(oldValue, undefined);
+      }
+
+      return () => {
+        runCleanup();
+        stop();
+      };
+    }
+
+    throw new Error('Reactive.watch: source must be a path string or getter function');
   }
 
   /**
@@ -273,6 +406,21 @@ class Reactive extends EventEmitter {
    */
   validatePath(path) {
     return this.store.isValidPath(path);
+  }
+
+  /**
+   * Returns collected runtime diagnostics.
+   * @returns {Array<{level: string, message: string, timestamp: number}>}
+   */
+  getDiagnostics() {
+    return this.dom.getDiagnostics();
+  }
+
+  /**
+   * Clears collected runtime diagnostics.
+   */
+  clearDiagnostics() {
+    this.dom.clearDiagnostics();
   }
 
   /**
@@ -397,6 +545,10 @@ class Reactive extends EventEmitter {
   destroy() {
     this.dom.destroy();
     this.store.destroy();
+    ExpressionManager.setOptions({
+      safeMode: false,
+      onUnsafeExpression: null,
+    });
 
     this.emit('destroy');
   }

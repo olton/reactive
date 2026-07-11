@@ -358,6 +358,27 @@ describe('EventManager modifiers', () => {
     expect(reactive.onClick).toHaveBeenCalledTimes(1);
   });
 
+  it('should support multiple keydown modifier handlers on one element', () => {
+    const reactive = new Reactive({
+      onEnter: () => {},
+      onEsc: () => {},
+    });
+    reactive.onEnter = mock();
+    reactive.onEsc = mock();
+
+    const eventManager = new EventManager({}, reactive);
+    const input = document.createElement('input');
+
+    eventManager.bindEventHandler(input, 'keydown', 'onEnter($event)', ['enter'], '@keydown.enter');
+    eventManager.bindEventHandler(input, 'keydown', 'onEsc($event)', ['esc'], '@keydown.esc');
+
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+    expect(reactive.onEnter).toHaveBeenCalledTimes(1);
+    expect(reactive.onEsc).toHaveBeenCalledTimes(1);
+  });
+
   mouseButtonCases.forEach(({ modifier, button, mismatch }) => {
     it(`should support .${modifier} mouse button modifier`, () => {
       const reactive = new Reactive({ onClick: () => {} });

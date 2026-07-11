@@ -27,6 +27,10 @@ export default class DOMManager {
     this.inputs = [];
     this.domDependencies = new Map();
     this.virtualDom = new Map();
+    this.runtimeComponents = new Set();
+    this.runtimeTemplateCache = new Map();
+    this.aliasExpressionCache = new Map();
+    this.diagnostics = [];
 
     this.loopManager = new LoopManager(this, reactive);
     this.conditionalManager = new ConditionalManager(this, reactive);
@@ -34,6 +38,39 @@ export default class DOMManager {
     this.eventManager = new EventManager(this, reactive);
 
     Logger.debug('DOMManager: DOMManager initialized');
+  }
+
+  /**
+   * Stores a runtime diagnostic message.
+   *
+   * @param {'warn'|'error'|'info'} level - Diagnostic level.
+   * @param {string} message - Diagnostic message.
+   */
+  addDiagnostic(level, message) {
+    if (!this.reactive.options.devDiagnostics) {
+      return;
+    }
+
+    this.diagnostics.push({
+      level,
+      message,
+      timestamp: Date.now(),
+    });
+  }
+
+  /**
+   * Returns collected runtime diagnostics.
+   * @returns {Array<{level: string, message: string, timestamp: number}>}
+   */
+  getDiagnostics() {
+    return [...this.diagnostics];
+  }
+
+  /**
+   * Clears runtime diagnostics.
+   */
+  clearDiagnostics() {
+    this.diagnostics = [];
   }
 
   /**
@@ -325,6 +362,19 @@ export default class DOMManager {
     updates.conditional.forEach((dep) => this.conditionalManager.updateConditional(dep.element, dep.expression));
     updates.attribute.forEach((dep) => this.attributeManager.update(dep.element, dep.attribute, dep.expression));
     updates.loop.forEach((dep) => this.loopManager.updateLoopPart(dep.element, dep.arrayPath, value, dep.index));
+
+    this.runtimeComponents.forEach((component) => {
+      const hasDependency = Array.from(component.propsSources).some((path) => this.isPathDependency(path, propertyPath));
+      if (!hasDependency) {
+        return;
+      }
+
+      this.invokeLifecycleHook(component.lifecycle.updated, component.host, {
+        phase: 'updated',
+        propertyPath,
+        value,
+      });
+    });
   }
 
   /**
@@ -350,6 +400,573 @@ export default class DOMManager {
       node.textContent = newContent;
       this.virtualDom.set(node, newContent);
     }
+  }
+
+  /**
+   * Mounts runtime components declared with `data-component`.
+   * Component template is resolved from `<template id="...">` and projected with light DOM content.
+   *
+   * @param {HTMLElement} rootElement - Root element to process.
+   */
+  processRuntimeComponents(rootElement) {
+    const componentHosts = rootElement.querySelectorAll('[data-component]');
+
+    componentHosts.forEach((host) => {
+      const reference = (host.getAttribute('data-component') || '').trim();
+      if (!reference) {
+        return;
+      }
+
+      const selector = reference.startsWith('#') ? reference : `#${reference}`;
+      const template = this.resolveRuntimeTemplate(selector, rootElement);
+
+      if (!(template instanceof HTMLTemplateElement)) {
+        Logger.warn(`DOMManager: template ${selector} not found for component host`, host);
+        this.addDiagnostic('warn', `Template '${selector}' not found for data-component`);
+        return;
+      }
+
+      const mountRoot = document.createElement('div');
+      mountRoot.appendChild(template.content.cloneNode(true));
+
+      const propsAliases = this.parseComponentProps(host.getAttribute('data-props'), host);
+      if (propsAliases.size) {
+        this.applyComponentPropsAliases(mountRoot, propsAliases);
+      }
+
+      const lifecycle = this.parseLifecycleHooks(host);
+
+      const lightDomNodes = Array.from(host.childNodes);
+      lightDomNodes.forEach((node) => mountRoot.appendChild(node));
+
+      this.resolveSlotsForHost(mountRoot);
+
+      host.innerHTML = '';
+      while (mountRoot.firstChild) {
+        host.appendChild(mountRoot.firstChild);
+      }
+
+      host.removeAttribute('data-component');
+      host.removeAttribute('data-props');
+
+      const propsSources = new Set();
+      propsAliases.forEach((meta) => propsSources.add(meta.sourcePath));
+
+      this.runtimeComponents.add({
+        host,
+        propsSources,
+        lifecycle,
+      });
+
+      this.invokeLifecycleHook(lifecycle.mounted, host, {
+        phase: 'mounted',
+      });
+    });
+  }
+
+  /**
+   * Resolves template element for runtime component and applies optional cache.
+   *
+   * @param {string} selector - Template selector.
+   * @param {HTMLElement} rootElement - Current bind root.
+   * @returns {HTMLTemplateElement | null}
+   */
+  resolveRuntimeTemplate(selector, rootElement) {
+    if (this.reactive.options.runtimeTemplateCache && this.runtimeTemplateCache.has(selector)) {
+      return this.runtimeTemplateCache.get(selector);
+    }
+
+    const template = rootElement.querySelector(selector) || document.querySelector(selector);
+    const resolved = template instanceof HTMLTemplateElement ? template : null;
+
+    if (this.reactive.options.runtimeTemplateCache && resolved) {
+      this.runtimeTemplateCache.set(selector, resolved);
+    }
+
+    return resolved;
+  }
+
+  /**
+   * Parses lifecycle hooks from component host attributes.
+   *
+   * @param {HTMLElement} host - Component host.
+   * @returns {{mounted: string|null, updated: string|null, beforeUnmount: string|null}}
+   */
+  parseLifecycleHooks(host) {
+    return {
+      mounted: host.getAttribute('data-on-mounted'),
+      updated: host.getAttribute('data-on-updated'),
+      beforeUnmount: host.getAttribute('data-on-before-unmount'),
+    };
+  }
+
+  /**
+   * Invokes lifecycle method if available on reactive data or global scope.
+   *
+   * @param {string|null} hookName - Method name.
+   * @param {HTMLElement} host - Component host.
+   * @param {Object} payload - Lifecycle payload.
+   */
+  invokeLifecycleHook(hookName, host, payload) {
+    if (!hookName) {
+      return;
+    }
+
+    const method = this.reactive.data?.[hookName] || globalThis?.[hookName];
+    if (typeof method === 'function') {
+      method.call(this.reactive.data, {
+        host,
+        ...payload,
+      });
+      return;
+    }
+
+    this.addDiagnostic('warn', `Lifecycle hook '${hookName}' not found`);
+  }
+
+  /**
+   * Parses data-props aliases for runtime components.
+   * Format: { localName: source.path, local2: "another.path" }
+   *
+   * @param {string|null} rawProps - Raw data-props attribute value.
+   * @returns {Map<string, string>}
+   */
+  parseComponentProps(rawProps, host) {
+    const aliases = new Map();
+    const value = String(rawProps || '').trim();
+
+    if (!value) {
+      return aliases;
+    }
+
+    const body = value.startsWith('{') && value.endsWith('}') ? value.slice(1, -1) : value;
+
+    const entries = [];
+    let current = '';
+    let quote = null;
+    let depth = 0;
+
+    for (let i = 0; i < body.length; i++) {
+      const ch = body[i];
+
+      if ((ch === '"' || ch === "'") && body[i - 1] !== '\\') {
+        quote = quote === ch ? null : quote || ch;
+      }
+
+      if (!quote) {
+        if (ch === '{' || ch === '[' || ch === '(') depth += 1;
+        if (ch === '}' || ch === ']' || ch === ')') depth -= 1;
+
+        if (ch === ',' && depth === 0) {
+          if (current.trim()) {
+            entries.push(current.trim());
+          }
+          current = '';
+          continue;
+        }
+      }
+
+      current += ch;
+    }
+
+    if (current.trim()) {
+      entries.push(current.trim());
+    }
+
+    entries.forEach((entry) => {
+      const delimiter = entry.indexOf(':');
+      if (delimiter === -1) {
+        return;
+      }
+
+      const key = entry
+        .slice(0, delimiter)
+        .trim()
+        .replace(/^['"]|['"]$/g, '');
+      const source = entry
+        .slice(delimiter + 1)
+        .trim()
+        .replace(/^['"]|['"]$/g, '');
+
+      if (!key || !source) {
+        return;
+      }
+
+      const twoWay = source.startsWith('sync:');
+      const sourcePath = twoWay ? source.replace(/^sync:\s*/, '').trim() : source;
+
+      if (!sourcePath) {
+        this.addDiagnostic('warn', `Invalid data-props source for alias '${key}'`);
+        return;
+      }
+
+      aliases.set(key, {
+        sourcePath,
+        mode: twoWay ? 'two-way' : 'one-way',
+      });
+    });
+
+    if (!aliases.size && value) {
+      this.addDiagnostic('warn', `Unable to parse data-props on component host ${host?.tagName || ''}`);
+    }
+
+    return aliases;
+  }
+
+  /**
+   * Applies data-props aliases to text templates and directive expressions.
+   *
+   * @param {HTMLElement} rootElement - Component mount root.
+   * @param {Map<string, string>} aliases - Local-to-store path map.
+   */
+  applyComponentPropsAliases(rootElement, aliases) {
+    const walker = document.createTreeWalker(rootElement, NodeFilter.SHOW_TEXT, null);
+    let textNode;
+
+    while ((textNode = walker.nextNode())) {
+      if (!textNode.textContent || !textNode.textContent.includes('{{')) {
+        continue;
+      }
+
+      textNode.textContent = this.replaceAliasesInTemplateText(textNode.textContent, aliases);
+    }
+
+    const allElements = rootElement.querySelectorAll('*');
+    allElements.forEach((element) => {
+      Array.from(element.attributes).forEach((attribute) => {
+        const dynamicAttribute =
+          attribute.name.startsWith(':') ||
+          attribute.name.startsWith('@') ||
+          attribute.name === 'data-if' ||
+          attribute.name === 'data-else-if' ||
+          attribute.name === 'data-for' ||
+          attribute.name === 'data-in' ||
+          attribute.name === 'data-model' ||
+          attribute.name === 'data-bind';
+
+        if (!dynamicAttribute) {
+          return;
+        }
+
+        if (attribute.name === 'data-model') {
+          const modelPath = String(attribute.value || '').trim();
+          const aliasMeta = aliases.get(modelPath);
+
+          if (aliasMeta) {
+            if (aliasMeta.mode === 'two-way') {
+              element.setAttribute(attribute.name, aliasMeta.sourcePath);
+            } else {
+              this.addDiagnostic('warn', `One-way prop '${modelPath}' cannot be used with data-model`);
+            }
+            return;
+          }
+        }
+
+        element.setAttribute(attribute.name, this.replaceAliasesInExpression(attribute.value, aliases));
+      });
+    });
+  }
+
+  /**
+   * Replaces aliases in an expression with store source paths.
+   *
+   * @param {string} expression - Source expression.
+   * @param {Map<string, {sourcePath: string, mode: string} | string>} aliases - Alias map.
+   * @returns {string}
+   */
+  replaceAliasesInExpression(expression, aliases) {
+    let updated = String(expression || '');
+    const cacheKey = `${Array.from(aliases.entries())
+      .map(([alias, meta]) => `${alias}:${this.resolveAliasSourcePath(meta)}`)
+      .join('|')}::${updated}`;
+
+    if (this.aliasExpressionCache.has(cacheKey)) {
+      return this.aliasExpressionCache.get(cacheKey);
+    }
+
+    aliases.forEach((meta, alias) => {
+      const sourcePath = this.resolveAliasSourcePath(meta);
+      const escapedAlias = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`\\b${escapedAlias}(?=\\b|\\.)`, 'g');
+      updated = updated.replace(regex, sourcePath);
+    });
+
+    this.aliasExpressionCache.set(cacheKey, updated);
+
+    return updated;
+  }
+
+  /**
+   * Replaces aliases in all template placeholders within text.
+   *
+   * @param {string} text - Template text.
+   * @param {Map<string, {sourcePath: string, mode: string} | string>} aliases - Alias map.
+   * @returns {string}
+   */
+  replaceAliasesInTemplateText(text, aliases) {
+    return String(text || '').replace(/\{\{\s*([^}]+)\s*\}\}/g, (match, expr) => {
+      const replaced = this.replaceAliasesInExpression(expr.trim(), aliases);
+      return `{{${replaced}}}`;
+    });
+  }
+
+  /**
+   * Resolves the source path from alias metadata.
+   *
+   * @param {{sourcePath: string, mode: string} | string} meta - Alias metadata.
+   * @returns {string}
+   */
+  resolveAliasSourcePath(meta) {
+    return typeof meta === 'string' ? meta : meta.sourcePath;
+  }
+
+  /**
+   * Extracts scoped slot aliases from slot attributes.
+   * Supports `:alias="path"` and optional `data-slot-props="{ alias: path }"`.
+   *
+   * @param {HTMLSlotElement} slotElement - Slot element.
+   * @returns {Map<string, {sourcePath: string, mode: string}>}
+   */
+  parseScopedSlotAliases(slotElement) {
+    const aliases = new Map();
+
+    Array.from(slotElement.attributes).forEach((attribute) => {
+      if (!attribute.name.startsWith(':')) {
+        return;
+      }
+
+      const aliasName = attribute.name.slice(1).trim();
+      const sourcePath = String(attribute.value || '').trim();
+
+      if (!aliasName || !sourcePath) {
+        return;
+      }
+
+      aliases.set(aliasName, {
+        sourcePath,
+        mode: 'one-way',
+      });
+    });
+
+    const objectAliases = this.parseComponentProps(slotElement.getAttribute('data-slot-props'));
+    objectAliases.forEach((meta, alias) => {
+      aliases.set(alias, {
+        sourcePath: meta.sourcePath,
+        mode: 'one-way',
+      });
+    });
+
+    return aliases;
+  }
+
+  /**
+   * Applies scoped slot aliases to a slotted node tree.
+   *
+   * @param {Node} node - Slotted node.
+   * @param {Map<string, {sourcePath: string, mode: string}>} aliases - Scoped aliases.
+   */
+  applyScopedSlotAliases(node, aliases) {
+    if (!aliases.size) {
+      return;
+    }
+
+    if (node.nodeType === Node.TEXT_NODE) {
+      node.textContent = this.replaceAliasesInTemplateText(node.textContent, aliases);
+      return;
+    }
+
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return;
+    }
+
+    const root = node;
+
+    Array.from(root.attributes || []).forEach((attribute) => {
+      const dynamicAttribute =
+        attribute.name.startsWith(':') ||
+        attribute.name.startsWith('@') ||
+        attribute.name === 'data-if' ||
+        attribute.name === 'data-else-if' ||
+        attribute.name === 'data-for' ||
+        attribute.name === 'data-in' ||
+        attribute.name === 'data-model' ||
+        attribute.name === 'data-bind';
+
+      if (!dynamicAttribute) {
+        return;
+      }
+
+      root.setAttribute(attribute.name, this.replaceAliasesInExpression(attribute.value, aliases));
+    });
+
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let textNode;
+
+    while ((textNode = walker.nextNode())) {
+      if (!textNode.textContent || !textNode.textContent.includes('{{')) {
+        continue;
+      }
+
+      textNode.textContent = this.replaceAliasesInTemplateText(textNode.textContent, aliases);
+    }
+
+    const allElements = root.querySelectorAll('*');
+    allElements.forEach((element) => {
+      Array.from(element.attributes).forEach((attribute) => {
+        const dynamicAttribute =
+          attribute.name.startsWith(':') ||
+          attribute.name.startsWith('@') ||
+          attribute.name === 'data-if' ||
+          attribute.name === 'data-else-if' ||
+          attribute.name === 'data-for' ||
+          attribute.name === 'data-in' ||
+          attribute.name === 'data-model' ||
+          attribute.name === 'data-bind';
+
+        if (!dynamicAttribute) {
+          return;
+        }
+
+        element.setAttribute(attribute.name, this.replaceAliasesInExpression(attribute.value, aliases));
+      });
+    });
+  }
+
+  /**
+   * Projects light DOM children into <slot> placeholders in a Vue-like way.
+   * Supports named slots via `slot` attribute, default slot, and fallback content.
+   *
+   * @param {HTMLElement} rootElement - Root element to process.
+   */
+  processSlots(rootElement) {
+    const elements = [rootElement, ...rootElement.querySelectorAll('*')];
+    const hosts = elements.filter((element) => this.isSlotHost(element));
+
+    // Resolve outer hosts first so they can project content into nested slot outlets.
+    hosts.sort((a, b) => this.getElementDepth(a) - this.getElementDepth(b));
+
+    hosts.forEach((host) => this.resolveSlotsForHost(host));
+  }
+
+  /**
+   * Determines whether an element should be treated as a slot host.
+   *
+   * @param {Element} element - Candidate element.
+   * @returns {boolean}
+   */
+  isSlotHost(element) {
+    if (element.nodeType !== Node.ELEMENT_NODE || !element.querySelector('slot')) {
+      return false;
+    }
+
+    const hasDirectSlot = Array.from(element.children).some((child) => child.tagName === 'SLOT');
+    if (hasDirectSlot) {
+      return true;
+    }
+
+    const hasSlottableDirectChild = Array.from(element.childNodes).some((node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return node.textContent.trim().length > 0;
+      }
+
+      if (node.nodeType !== Node.ELEMENT_NODE) {
+        return false;
+      }
+
+      if (node.hasAttribute('slot')) {
+        return true;
+      }
+
+      return !node.querySelector('slot');
+    });
+
+    return hasSlottableDirectChild;
+  }
+
+  /**
+   * Calculates element depth in the DOM tree.
+   *
+   * @param {Element} element - Target element.
+   * @returns {number}
+   */
+  getElementDepth(element) {
+    let depth = 0;
+    let current = element;
+
+    while (current && current.parentElement) {
+      depth += 1;
+      current = current.parentElement;
+    }
+
+    return depth;
+  }
+
+  /**
+   * Resolves all direct slot children for a single host element.
+   *
+   * @param {Element} host - Slot host element.
+   */
+  resolveSlotsForHost(host) {
+    const directSlots = Array.from(host.querySelectorAll('slot'));
+
+    if (!directSlots.length) {
+      return;
+    }
+
+    const lightDomNodes = Array.from(host.childNodes).filter((node) => {
+      if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'SLOT') {
+        return false;
+      }
+
+      // Elements that contain slot outlets are considered template wrappers, not slottable content.
+      if (node.nodeType === Node.ELEMENT_NODE && node.querySelector('slot') && !node.hasAttribute('slot')) {
+        return false;
+      }
+
+      return true;
+    });
+    const assigned = new Set();
+
+    directSlots.forEach((slotElement) => {
+      const slotName = slotElement.getAttribute('name');
+      const scopedAliases = this.parseScopedSlotAliases(slotElement);
+
+      const matchedNodes = lightDomNodes.filter((node) => {
+        if (assigned.has(node)) {
+          return false;
+        }
+
+        if (slotName) {
+          return node.nodeType === Node.ELEMENT_NODE && node.getAttribute('slot') === slotName;
+        }
+
+        if (node.nodeType === Node.TEXT_NODE) {
+          return node.textContent.trim().length > 0;
+        }
+
+        return node.nodeType === Node.ELEMENT_NODE && !node.hasAttribute('slot');
+      });
+
+      if (matchedNodes.length) {
+        matchedNodes.forEach((node) => {
+          assigned.add(node);
+
+          this.applyScopedSlotAliases(node, scopedAliases);
+
+          if (node.nodeType === Node.ELEMENT_NODE && node.hasAttribute('slot')) {
+            node.removeAttribute('slot');
+          }
+
+          slotElement.parentNode.insertBefore(node, slotElement);
+        });
+      } else {
+        while (slotElement.firstChild) {
+          slotElement.parentNode.insertBefore(slotElement.firstChild, slotElement);
+        }
+      }
+
+      slotElement.remove();
+    });
   }
 
   /**
@@ -406,6 +1023,8 @@ export default class DOMManager {
    */
   bindDOM(rootElement) {
     Logger.debug('DOMManager: bind DOM from', rootElement);
+    this.processRuntimeComponents(rootElement);
+    this.processSlots(rootElement);
     this.loopManager.parseLoops(rootElement);
     this.conditionalManager.parseConditionals(rootElement);
     this.attributeManager.parseAttributesBind(rootElement);
@@ -426,6 +1045,12 @@ export default class DOMManager {
    * and free resources to avoid memory leaks.
    */
   destroy() {
+    this.runtimeComponents.forEach((component) => {
+      this.invokeLifecycleHook(component.lifecycle.beforeUnmount, component.host, {
+        phase: 'beforeUnmount',
+      });
+    });
+
     this.inputs.forEach(({ element }) => {
       if (element.__reactiveInputHandler) {
         element.removeEventListener('input', element.__reactiveInputHandler);
@@ -437,6 +1062,10 @@ export default class DOMManager {
     this.inputs = [];
     this.domDependencies.clear();
     this.virtualDom.clear();
+    this.runtimeComponents.clear();
+    this.runtimeTemplateCache.clear();
+    this.aliasExpressionCache.clear();
+    this.clearDiagnostics();
 
     this.loopManager.destroy();
     this.conditionalManager.destroy();

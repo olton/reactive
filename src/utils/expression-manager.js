@@ -1,4 +1,38 @@
 export default class ExpressionManager {
+  static options = {
+    safeMode: false,
+    onUnsafeExpression: null,
+  };
+
+  static variablesCache = new Map();
+
+  /**
+   * Configures expression evaluation options.
+   * @param {{safeMode?: boolean, onUnsafeExpression?: ((expression: string) => void) | null}} options
+   */
+  static setOptions(options = {}) {
+    this.options = {
+      ...this.options,
+      ...options,
+    };
+  }
+
+  /**
+   * Performs a conservative safety check for expressions.
+   * @param {string} expression
+   * @returns {boolean}
+   */
+  static isSafeExpression(expression) {
+    const value = String(expression || '');
+
+    const forbiddenPatterns = [
+      /\b(?:window|document|globalThis|Function|eval|constructor|prototype|__proto__)\b/,
+      /[;`]/,
+      /(^|[^=!<>])=($|[^=])/, // assignment, but not comparison operators
+    ];
+
+    return !forbiddenPatterns.some((pattern) => pattern.test(value));
+  }
   /**
    * Evaluates a given expression within a specific context.
    *
@@ -17,6 +51,13 @@ export default class ExpressionManager {
    */
   static evaluateExpression(expression, context) {
     try {
+      if (this.options.safeMode && !this.isSafeExpression(expression)) {
+        if (typeof this.options.onUnsafeExpression === 'function') {
+          this.options.onUnsafeExpression(expression);
+        }
+        return false;
+      }
+
       if (expression.startsWith('{{') && expression.endsWith('}}')) {
         const path = expression.substring(2, expression.length - 2).trim();
         return this.getValueFromContext(context, path);
@@ -147,6 +188,11 @@ export default class ExpressionManager {
    * Variables are returned in their base form (in other words, the part before any dot notation or brackets).
    */
   static extractVariables(expression) {
+    const cacheKey = String(expression || '');
+    if (this.variablesCache.has(cacheKey)) {
+      return [...this.variablesCache.get(cacheKey)];
+    }
+
     const variables = [];
 
     // Удаляем строковые литералы, чтобы не извлекать переменные из них
@@ -169,6 +215,7 @@ export default class ExpressionManager {
       });
     }
 
+    this.variablesCache.set(cacheKey, [...variables]);
     return variables;
   }
 }

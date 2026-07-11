@@ -342,6 +342,51 @@ hr {
   color: #4f4338;
 }
 
+.hint-box {
+  margin-top: 10px;
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(43, 31, 18, 0.16);
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.hint-box ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.hint-box li {
+  margin: 4px 0;
+}
+
+.capture-box,
+.self-box {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px dashed rgba(43, 31, 18, 0.22);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.scroll-demo {
+  margin-top: 12px;
+  max-height: 130px;
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(43, 31, 18, 0.15);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.scroll-demo p {
+  margin: 0 0 8px;
+}
+
+.log-list .todo-item {
+  grid-template-columns: 36px 1fr auto auto;
+}
+
 @media (max-width: 1000px) {
   .grid {
     grid-template-columns: 1fr;

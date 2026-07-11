@@ -4,27 +4,45 @@
 
 declare module '@olton/reactive' {
   /**
-  * Default options for the Reactive class.
+   * Default options for the Reactive class.
    */
   interface ModelOptions {
     /**
      * Identifier for the model instance
-    * @default "reactive"
+     * @default "reactive"
      */
     id: string;
-    
+
     /**
      * Whether to use simple expressions in templates
      * @default true
      */
     useSimpleExpressions?: boolean;
-    
+
     /**
      * Enable debug mode for verbose logging
      * @default false
      */
     debug?: boolean;
-    
+
+    /**
+     * Enables conservative safety checks for runtime expressions.
+     * @default false
+     */
+    safeExpressions?: boolean;
+
+    /**
+     * Enables collection of runtime diagnostics.
+     * @default false
+     */
+    devDiagnostics?: boolean;
+
+    /**
+     * Enables template lookup cache for runtime components.
+     * @default true
+     */
+    runtimeTemplateCache?: boolean;
+
     plugins?: Array<{
       name: string;
       plugin: Function;
@@ -49,17 +67,17 @@ declare module '@olton/reactive' {
     /**
      * Items added to the array
      */
-    added: Array<{index: number, item: any}>;
-    
+    added: Array<{ index: number; item: any }>;
+
     /**
      * Items removed from the array
      */
-    removed: Array<{index: number, item: any}>;
-    
+    removed: Array<{ index: number; item: any }>;
+
     /**
      * Items moved within the array
      */
-    moved: Array<{oldIndex: number, newIndex: number, item: any}>;
+    moved: Array<{ oldIndex: number; newIndex: number; item: any }>;
   }
 
   /**
@@ -70,12 +88,12 @@ declare module '@olton/reactive' {
      * Function that calculates the property value
      */
     getter: () => any;
-    
+
     /**
      * Cached value of the computed property
      */
     value: any;
-    
+
     /**
      * List of dependencies for this computed property
      */
@@ -95,7 +113,7 @@ declare module '@olton/reactive' {
       path?: string;
       message: string;
     }>;
-    
+
     /**
      * Array of validation warnings
      */
@@ -115,7 +133,7 @@ declare module '@olton/reactive' {
      * The data in the snapshot
      */
     data: any;
-    
+
     /**
      * Timestamp when the snapshot was created
      */
@@ -130,32 +148,41 @@ declare module '@olton/reactive' {
      * Property being changed
      */
     prop: string;
-    
+
     /**
      * Previous value
      */
     oldValue: any;
-    
+
     /**
      * New value
      */
     newValue: any;
-    
+
     /**
      * Flag to prevent the change
      */
     preventDefault: boolean;
-    
+
     /**
      * For array operations, the method being called
      */
     method?: string;
-    
+
     /**
      * For array operations, the arguments to the method
      */
     args?: any[];
   }
+
+  interface WatchOptions {
+    immediate?: boolean;
+    deep?: boolean;
+  }
+
+  type WatchCleanup = () => void;
+  type WatchOnCleanup = (cleanupFn: WatchCleanup) => void;
+  type WatchSource<T = any> = string | ((state: Record<string, any>) => T);
 
   /**
    * Interface for DOM dependency information
@@ -165,17 +192,17 @@ declare module '@olton/reactive' {
      * DOM element
      */
     element: HTMLElement;
-    
+
     /**
      * Type of dependency
      */
     type: string;
-    
+
     /**
      * Original template text for template dependencies
      */
     template?: string;
-    
+
     /**
      * Additional properties
      */
@@ -190,11 +217,17 @@ declare module '@olton/reactive' {
      * Input element
      */
     element: HTMLInputElement;
-    
+
     /**
      * Property path bound to the input
      */
     property: string;
+  }
+
+  interface RuntimeDiagnostic {
+    level: 'warn' | 'error' | 'info';
+    message: string;
+    timestamp: number;
   }
 
   /**
@@ -270,12 +303,17 @@ declare module '@olton/reactive' {
     use(middleware: (context: MiddlewareContext, next: () => void) => void): void;
 
     /**
-     * Watches a specific path in the state and triggers a callback on changes.
-     * @param path - Path to watch.
-     * @param callback - Callback function to execute when the path changes.
+     * Watches a reactive source and triggers callback when it changes.
+     * @param source - Path to watch or getter function.
+     * @param callback - Callback function to execute when source changes.
+     * @param options - Watch options.
      * @returns Function to unsubscribe the watcher
      */
-    watch(path: string, callback: (newValue: any, oldValue: any) => void): () => void;
+    watch<T = any>(
+      source: WatchSource<T>,
+      callback: (newValue: T, oldValue: T | undefined, onCleanup: WatchOnCleanup) => void,
+      options?: WatchOptions,
+    ): () => void;
 
     /**
      * Executes a batch of state changes in a single update cycle.
@@ -315,6 +353,16 @@ declare module '@olton/reactive' {
      * @returns Whether the path exists in the store
      */
     validatePath(path: string): boolean;
+
+    /**
+     * Returns collected runtime diagnostics.
+     */
+    getDiagnostics(): RuntimeDiagnostic[];
+
+    /**
+     * Clears runtime diagnostics.
+     */
+    clearDiagnostics(): void;
 
     /**
      * Initializes the DOM bindings for the model.

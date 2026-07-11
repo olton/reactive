@@ -21,6 +21,8 @@ const app = new Reactive(
     counterChanges: 0,
     lastAction: 'Система готова',
     devToolsStarted: false,
+    modifierDemoCount: 0,
+    modifierLog: [],
 
     user: {
       name: 'Оксана',
@@ -154,6 +156,17 @@ app.on('change', ({ path }) => {
 app.init('#app');
 syncTodoViews();
 
+const pushModifierLog = (label, event) => {
+  const keyInfo = event && 'key' in event && event.key ? ` key=${event.key}` : '';
+  const buttonInfo = event && 'button' in event ? ` button=${event.button}` : '';
+  const stamp = new Date().toLocaleTimeString('uk-UA');
+  const row = `${stamp} | ${label}${keyInfo}${buttonInfo}`;
+
+  app.data.modifierDemoCount += 1;
+  app.data.modifierLog = [row, ...app.data.modifierLog].slice(0, 10);
+  app.data.lastAction = `Модифікатор: ${label}`;
+};
+
 setInterval(() => {
   app.data.now = new Date().toLocaleTimeString('uk-UA');
 }, 1000);
@@ -262,4 +275,8 @@ globalThis.startDevTools = () => {
   devToolsInstance.updateDisplay();
   app.data.devToolsStarted = true;
   app.data.lastAction = 'DevTools увімкнено';
+};
+
+globalThis.logModifier = (label, event) => {
+  pushModifierLog(label, event);
 };

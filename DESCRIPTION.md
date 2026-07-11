@@ -106,6 +106,51 @@ In your HTML, you can use the computed property like any other property:
 <p>Full Name: {{fullName}}</p>
 ```
 
+### Watchers (side effects)
+
+Computed properties are great for declarative derived state. For side effects (DOM integrations, API calls, syncing other state), use `watch`.
+
+Watch by path:
+
+```javascript
+const stop = reactive.watch('count', (newValue, oldValue) => {
+  console.log('count changed:', oldValue, '->', newValue);
+});
+
+// later
+stop();
+```
+
+Watch by getter:
+
+```javascript
+reactive.watch(
+  (state) => `${state.firstName} ${state.lastName}`,
+  (fullName) => {
+    document.title = fullName;
+  },
+);
+```
+
+Use `immediate` to run callback right away and `onCleanup` for cancelable async side effects:
+
+```javascript
+reactive.watch(
+  'searchQuery',
+  async (query, _oldQuery, onCleanup) => {
+    const controller = new AbortController();
+    onCleanup(() => controller.abort());
+
+    const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
+      signal: controller.signal,
+    });
+
+    reactive.data.searchResult = await response.json();
+  },
+  { immediate: true },
+);
+```
+
 ### Conditional Rendering
 
 You can conditionally render elements based on data in your model:
@@ -136,6 +181,151 @@ const reactive = new Reactive({
   items: [{ name: 'Item 1' }, { name: 'Item 2' }, { name: 'Item 3' }],
 });
 ```
+
+### Slots (Vue-like content projection)
+
+Reactive supports Vue-like slot projection with default and named slots.
+
+Default slot:
+
+```html
+<div id="card">
+  <slot><p>Fallback content</p></slot>
+  <p>{{name}}</p>
+</div>
+```
+
+Named slot:
+
+```html
+<article id="layout">
+  <header>
+    <slot name="header"><h1>Fallback Header</h1></slot>
+  </header>
+  <main>
+    <slot><p>Fallback Body</p></slot>
+  </main>
+
+  <h2 slot="header">Projected Header</h2>
+</article>
+```
+
+If no matching content is provided, fallback content inside `<slot>` is used.
+
+Scoped slots are also supported for runtime components.
+You can pass slot props with `:alias="path"` directly on `<slot>`:
+
+```html
+<template id="scope-card">
+  <section>
+    <slot name="title" :item="user"></slot>
+  </section>
+</template>
+
+<div data-component="scope-card">
+  <h3 slot="title">{{item.name}}</h3>
+</div>
+```
+
+Or with object syntax via `data-slot-props`:
+
+```html
+<template id="scope-object-card">
+  <section>
+    <slot name="body" data-slot-props="{ location: user.city }"></slot>
+  </section>
+</template>
+
+<div data-component="scope-object-card">
+  <p slot="body">{{location}}</p>
+</div>
+```
+
+### Runtime components without compilation
+
+You can compose reusable UI blocks directly in HTML using `<template>` and `data-component`.
+
+```html
+<template id="user-card">
+  <article class="card">
+    <header><slot name="title">User</slot></header>
+    <section><slot>Empty content</slot></section>
+    <footer>{{ user.name }}</footer>
+  </article>
+</template>
+
+<div data-component="user-card">
+  <h3 slot="title">Profile</h3>
+  <p>{{ user.city }}</p>
+</div>
+```
+
+Reactive mounts this at runtime during `init()`; no compiler/build transform is required.
+
+You can also map local template aliases to reactive store paths using `data-props`:
+
+```html
+<template id="profile-card">
+  <article>
+    <h3>{{ title }}</h3>
+    <p :class="{ active: stateActive }">{{ cityName }}</p>
+  </article>
+</template>
+
+<div data-component="profile-card" data-props="{ title: user.name, cityName: user.city, stateActive: isActive }"></div>
+```
+
+Aliases from `data-props` are resolved at runtime and stay reactive because they are mapped to store paths.
+
+For two-way props with `data-model`, use `sync:` prefix:
+
+```html
+<template id="editor-card">
+  <label>Name <input data-model="nameValue" /></label>
+</template>
+
+<div data-component="editor-card" data-props="{ nameValue: sync:user.name }"></div>
+```
+
+Without `sync:`, prop aliases are one-way and do not write back to source path.
+
+You can also register lifecycle hooks on the host element:
+
+```html
+<div
+  data-component="user-card"
+  data-on-mounted="onCardMounted"
+  data-on-updated="onCardUpdated"
+  data-on-before-unmount="onCardBeforeUnmount"
+></div>
+```
+
+```javascript
+const app = new Reactive({
+  onCardMounted({ host }) {
+    host.classList.add('ready');
+  },
+  onCardUpdated({ propertyPath }) {
+    console.log('component updated by', propertyPath);
+  },
+});
+```
+
+Runtime options for safety, diagnostics and cache:
+
+```javascript
+const app = new Reactive(data, {
+  safeExpressions: true,
+  devDiagnostics: true,
+  runtimeTemplateCache: true,
+});
+
+console.log(app.getDiagnostics());
+app.clearDiagnostics();
+```
+
+When `safeExpressions` is enabled, unsafe expressions are blocked and recorded in diagnostics.
+With `devDiagnostics`, runtime warnings (for example missing templates or one-way `data-model` misuse) are available through `getDiagnostics()`.
 
 ## Advanced Features
 

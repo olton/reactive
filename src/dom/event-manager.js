@@ -61,8 +61,9 @@ export default class EventManager {
 
           const { eventName, modifiers } = this.parseEventDescriptor(attr.name);
           const handler = attr.value.trim();
+          const bindingKey = attr.name;
 
-          this.bindEventHandler(element, eventName, handler, modifiers);
+          this.bindEventHandler(element, eventName, handler, modifiers, bindingKey);
           element.removeAttribute(attr.name); // Удаляем атрибут, чтобы избежать дублирования
         }
       });
@@ -192,8 +193,10 @@ export default class EventManager {
    * @param {string} eventName - Event name (without @)
    * @param {string} handlerExpression - Line with an event processor
    */
-  bindEventHandler(element, eventName, handlerExpression, modifiers = []) {
+  bindEventHandler(element, eventName, handlerExpression, modifiers = [], bindingKey = null) {
     Logger.debug(`EventManager: Binding event handler with expression ${handlerExpression} for ${eventName} on`, element);
+
+    const resolvedBindingKey = bindingKey || `${eventName}::${modifiers.join('.')}::${handlerExpression}`;
 
     const listenerOptions = this.getEventListenerOptions(modifiers);
     const hasExact = modifiers.includes('exact');
@@ -326,12 +329,13 @@ export default class EventManager {
     }
 
     const elementHandlers = this.eventHandlers.get(element);
-    if (elementHandlers.has(eventName)) {
-      const previousBinding = elementHandlers.get(eventName);
+    if (elementHandlers.has(resolvedBindingKey)) {
+      const previousBinding = elementHandlers.get(resolvedBindingKey);
       element.removeEventListener(eventName, previousBinding.handler, previousBinding.options);
     }
 
-    elementHandlers.set(eventName, {
+    elementHandlers.set(resolvedBindingKey, {
+      eventName,
       handler: eventHandler,
       options: listenerOptions,
     });
@@ -348,14 +352,18 @@ export default class EventManager {
     if (this.eventHandlers.has(element)) {
       const elementHandlers = this.eventHandlers.get(element);
 
-      if (elementHandlers.has(eventName)) {
-        const binding = elementHandlers.get(eventName);
-        element.removeEventListener(eventName, binding.handler, binding.options);
-        elementHandlers.delete(eventName);
-
-        if (elementHandlers.size === 0) {
-          this.eventHandlers.delete(element);
+      const keysToDelete = [];
+      elementHandlers.forEach((binding, key) => {
+        if (binding.eventName === eventName) {
+          element.removeEventListener(eventName, binding.handler, binding.options);
+          keysToDelete.push(key);
         }
+      });
+
+      keysToDelete.forEach((key) => elementHandlers.delete(key));
+
+      if (elementHandlers.size === 0) {
+        this.eventHandlers.delete(element);
       }
     }
   }
@@ -370,8 +378,9 @@ export default class EventManager {
       if (attr.name.startsWith('@')) {
         const { eventName, modifiers } = this.parseEventDescriptor(attr.name);
         const handler = attr.value.trim();
+        const bindingKey = attr.name;
 
-        this.bindEventHandler(element, eventName, handler, modifiers);
+        this.bindEventHandler(element, eventName, handler, modifiers, bindingKey);
         element.removeAttribute(attr.name);
       }
     });

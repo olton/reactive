@@ -156,6 +156,105 @@
           <p class="mono">Остання дія: {{ lastAction }}</p>
         </article>
       </section>
+
+      <section class="grid">
+        <article class="card">
+          <h2>5) Модифікатори подій</h2>
+          <p class="mono">Лічильник демо-подій: {{ modifierDemoCount }}</p>
+          <div class="hint-box">
+            <strong>Як тестувати:</strong>
+            <ul>
+              <li>тисни кнопки в секціях нижче та дивись результат у логах;</li>
+              <li>для <strong>.ctrl/.alt/.shift/.meta/.exact</strong> тримай відповідні клавіші під час кліку;</li>
+              <li>для <strong>.self</strong> клікни саме в рамку, не у внутрішню кнопку;</li>
+              <li>для <strong>key-модифікаторів</strong> фокусуйся в input і натискай потрібні клавіші;</li>
+              <li>для <strong>.passive</strong> прокрути блок скролу.</li>
+            </ul>
+          </div>
+
+          <div class="result-box">
+            <p class="mono">Системні модифікатори</p>
+            <div class="row">
+              <button @click.ctrl="logModifier('click.ctrl', $event)">Клік із Ctrl</button>
+              <button @click.ctrl.exact="logModifier('click.ctrl.exact', $event)">Клік лише Ctrl (.exact)</button>
+              <button @click.exact="logModifier('click.exact', $event)">Клік без Ctrl/Alt/Shift/Meta</button>
+            </div>
+
+            <p class="mono">Базові модифікатори</p>
+            <div class="row">
+              <button @click.once="logModifier('click.once', $event)">Лише один раз (.once)</button>
+              <button @click.stop.prevent="logModifier('click.stop.prevent', $event)">Stop + Prevent</button>
+            </div>
+
+            <p class="mono">Capture та Self</p>
+            <div class="capture-box" @click.capture="logModifier('click.capture.parent', $event)">
+              <strong>Capture-контейнер:</strong> цей блок спрацьовує раніше за вкладену кнопку.
+              <div class="row">
+                <button @click="logModifier('click.child', $event)">Дочірня кнопка</button>
+              </div>
+            </div>
+
+            <div class="self-box" @click.self="logModifier('click.self', $event)">
+              <strong>.self зона</strong> — клікни на рамку (не на кнопку всередині)
+              <div class="row">
+                <button @click="logModifier('click.inner', $event)">Внутрішній елемент</button>
+              </div>
+            </div>
+
+            <p class="mono">Submit-модифікатори</p>
+            <form class="row" @submit.prevent="logModifier('submit.prevent', $event)">
+              <input type="text" placeholder="Форма з @submit.prevent" />
+              <button type="submit">Submit із prevent</button>
+            </form>
+
+            <form class="row" @submit.prevent>
+              <input type="text" placeholder="Форма тільки з модифікатором" />
+              <button type="submit">Submit only modifier</button>
+            </form>
+
+            <p class="mono">Клавіатурні модифікатори</p>
+            <div class="row">
+              <input
+                type="text"
+                placeholder="Натисни Enter, Esc, Ctrl+Enter"
+                @keydown.enter="logModifier('keydown.enter', $event)"
+                @keydown.esc="logModifier('keydown.esc', $event)"
+                @keydown.ctrl.enter="logModifier('keydown.ctrl.enter', $event)"
+                @keydown.ctrl.enter.exact="logModifier('keydown.ctrl.enter.exact', $event)"
+              />
+            </div>
+
+            <p class="mono">Модифікатори кнопок миші</p>
+            <div class="row">
+              <button @mousedown.left="logModifier('mousedown.left', $event)">Ліва кнопка миші</button>
+              <button @mousedown.middle="logModifier('mousedown.middle', $event)">Середня кнопка</button>
+              <button @mousedown.right="logModifier('mousedown.right', $event)">Права кнопка</button>
+            </div>
+
+            <div class="scroll-demo" @scroll.passive="logModifier('scroll.passive', $event)">
+              <p>Прокрути цей блок, щоб протестувати <strong>@scroll.passive</strong>.</p>
+              <p>Reactive demo line 1</p>
+              <p>Reactive demo line 2</p>
+              <p>Reactive demo line 3</p>
+              <p>Reactive demo line 4</p>
+              <p>Reactive demo line 5</p>
+              <p>Reactive demo line 6</p>
+              <p>Reactive demo line 7</p>
+              <p>Reactive demo line 8</p>
+              <p>Reactive demo line 9</p>
+            </div>
+          </div>
+
+          <ul class="todo-list log-list">
+            <li class="todo-item" data-for="row, idx in modifierLog">
+              <span>{{ idx }}.</span>
+              <span>{{ row }}</span>
+              <span class="chip chip-priority">event</span>
+              <span class="chip chip-open">log</span>
+            </li>
+          </ul>
+        </article>
+      </section>
     </main>
 
     <script type="module" src="./demo.js"></script>
